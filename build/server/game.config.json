@@ -1,0 +1,37 @@
+{
+  "cardsMax": 5,
+  "cardsStart": 5,
+  "pokerSymbols": [
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "T",
+    "J",
+    "Q",
+    "K",
+    "A"
+  ],
+  "pokerColors": [
+    "k",
+    "h",
+    "t",
+    "p"
+  ],
+  "ranks09": [
+    "Royal flush",
+    "Straight flush",
+    "Four of a kind",
+    "Flush",
+    "Full house",
+    "Three of a kind",
+    "Straight",
+    "Two pairs",
+    "Pair",
+    "High card"
+  ]
+}

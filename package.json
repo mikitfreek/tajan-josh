@@ -1,0 +1,29 @@
+{
+  "name": "tajan",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node build/server/init.js",
+    "build": "snowpack build",
+    "watch": "snowpack build --watch",
+    "dev": "nodemon build/init.js",
+    "dev3": "nodemon --exec \"snowpack build\" --ignore build/",
+    "dev2": "snowpack dev",
+    "bb": "tsc -p tsconfig.json && npm run copyJsonConfig",
+    "copyJsonConfig": "find server/ -name '*.json' -exec cp -prv '{}' 'build/server' ';'",
+    "watch2": "nodemon --exec \"npm run build && node build/server/init.js\" --ignore build/",
+    "init": "snowpack init"
+  },
+  "devDependencies": {
+    "@types/node": "^18.7.23",
+    "nodemon": "^2.0.20",
+    "snowpack": "^3.8.8",
+    "typescript": "^4.8.3"
+  },
+  "dependencies": {
+    "express": "^4.17.2",
+    "uuid": "^8.3.2",
+    "ws": "^8.5.0"
+  }
+}
