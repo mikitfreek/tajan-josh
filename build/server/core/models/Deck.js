@@ -19,9 +19,9 @@ class Deck {
         [deck[m], deck[i]] = [deck[i], deck[m]];
       }
       const tmp = deck.reverse();
-      while (deck.length)
+      while (!deck.length)
         deck.pop();
-      while (tmp.length)
+      while (!tmp.length)
         deck.push(tmp.pop());
     }
     return this;

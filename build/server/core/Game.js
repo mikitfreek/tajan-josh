@@ -13,30 +13,48 @@ class Game {
     this.rooms = [];
     this._rooms = [];
   }
-  connect(ws, req, roomCode = "") {
-    const clientName = "client" + Object.keys(this.clients).length;
-    const clientId = uuidv4();
-    const clientIp = req.socket.remoteAddress;
-    const clientData = new Client(clientName, clientId, ws, clientIp, config.cardsStart);
-    this.clients[clientId] = clientData;
-    const payLoad = {
-      method: "connect",
-      clientId
-    };
-    ws.send(JSON.stringify(payLoad));
-    console.log("* >======== " + clientName + " ========>");
-    console.log("New connection: " + clientId);
-    if (arguments.length == 3) {
+  async connect(ws, req, roomCode) {
+    let connectId = uuidv4();
+    console.log("Loaded ID: " + connectId);
+    let clientId = connectId;
+    clientId = await this.init(ws, req, connectId);
+    if (arguments.length === 3) {
       const req2 = {clientId, roomId: roomCode};
       this.join(req2);
     } else
       this.clients[clientId].room = "lobby";
-    ws.on("message", (msg) => {
-      this.message(msg);
-    });
+    console.log(clientId);
+    ws.on("message", (msg) => this.message(msg));
     ws.on("close", () => {
-      this.clear_memory(clientId);
+      this.deleteClientData(clientId);
       console.log("Connection close: " + clientId);
+    });
+  }
+  async init(ws, req, connectId) {
+    return new Promise((resolve, reject) => {
+      const payLoad = {
+        method: "connect",
+        clientId: connectId
+      };
+      ws.send(JSON.stringify(payLoad));
+      ws.on("message", async (msg) => {
+        let clientId;
+        if (JSON.parse(msg).method !== "load")
+          clientId = connectId;
+        else {
+          clientId = await JSON.parse(msg).id;
+          console.log(clientId);
+          if (typeof this.clients[clientId] === "undefined") {
+            const clientIp = req.socket.remoteAddress;
+            const clientName = `client_${Object.keys(this.clients).length}_${Date.now()}`;
+            const clientData = new Client(clientName, clientId, ws, clientIp, config.cardsStart);
+            this.clients[clientId] = clientData;
+            console.log("* >======== " + clientName + " ========>");
+            console.log("New connection: " + clientId);
+          }
+          resolve(clientId);
+        }
+      });
     });
   }
   message(msg) {
@@ -95,16 +113,6 @@ class Game {
       this.overloadProtection(ws, clientId);
     }
   }
-  joinRoom(clientId, room) {
-    let client = this.clients[clientId];
-    if (client.color === "init")
-      client.color = randomColor();
-    room.clients.push({
-      id: clientId,
-      name: client.name,
-      color: client.color
-    });
-  }
   draw(req) {
     const roomId = req.roomId;
     const room = this.rooms[roomId];
@@ -116,12 +124,13 @@ class Game {
     for (let i = 0; i < config.cardsMax; i++)
       room.clients.forEach((c) => {
         const client = this.clients[c.id];
-        if (client.score - i >= 1)
+        if (client.score - i > 0)
           this.clients[c.id].cards.push(newDeck.deal());
       });
     console.log("Rozdano karty");
     room.clients.forEach((c) => {
-      const cards = [];
+      console.log("Rozdano karty1");
+      let cards = [];
       this.clients[c.id].cards.forEach((card) => {
         cards.push(card);
       });
@@ -133,31 +142,19 @@ class Game {
     });
     this.currentPlayer(roomId);
   }
-  currentPlayer(roomId) {
-    const room = this.rooms[roomId];
-    const _room = this._rooms[roomId];
-    const payLoad = {
-      method: "turn"
-    };
-    this.clients[_room.last - 1].connection.send(JSON.stringify(payLoad));
-    room.clients.forEach((c, i) => {
-      if (i !== _room.last - 1)
-        this.clients[c.id].connection.send(JSON.stringify(payLoad));
-    });
-  }
   move(req) {
     const roomId = req.roomId;
     const room = this.rooms[roomId];
     const _room = this._rooms[roomId];
     const bid = req.bid;
-    if (bid !== "check") {
+    if (bid === "raise") {
       if (_room.bid === null)
-        _room.bid = 0;
+        this._rooms[roomId].bid = 0;
       if (bid > _room.bid) {
-        _room.bid = bid;
-        ++_room.last;
-        if (_room.last > room.clients.length - 1)
-          _room.last = 0;
+        this._rooms[roomId].bid = bid;
+        ++this._rooms[roomId].last;
+        if (_room.last >= room.clients.length)
+          this._rooms[roomId].last = 0;
         console.log("gituwa mordeczko dobry zakładzik");
         room.clients.forEach((c) => {
           const payLoad = {
@@ -259,12 +256,33 @@ class Game {
         };
         this.clients[c.id].connection.send(JSON.stringify(payLoad));
       });
-      ++_room.last;
-      if (_room.last > room.clients.length - 1)
-        _room.last = 0;
+      ++this._rooms[roomId].last;
+      if (_room.last >= room.clients.length)
+        this._rooms[roomId].last = 0;
     }
   }
-  clear_memory(param) {
+  joinRoom(clientId, room) {
+    let client = this.clients[clientId];
+    if (client.color === "init")
+      client.color = randomColor();
+    room.clients.push({
+      id: clientId,
+      name: client.name,
+      color: client.color
+    });
+  }
+  currentPlayer(roomId) {
+    const room = this.rooms[roomId];
+    const _room = this._rooms[roomId];
+    const payLoad = {
+      method: "turn"
+    };
+    room.clients.forEach((c, i) => {
+      this.clients[c.id].connection.send(JSON.stringify(payLoad));
+      console.log(c.id + " - " + i);
+    });
+  }
+  deleteClientData(param) {
     const clientId = param;
     const roomId = this.clients[clientId].room;
     if (typeof this.rooms !== "undefined" && roomId !== "lobby" && roomId !== "init") {

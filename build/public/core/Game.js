@@ -1,12 +1,12 @@
+import {Store} from "./comp/Store.js";
 import {Render} from "./comp/Render.js";
 import {Debug} from "./comp/Debug.js";
+const Storage = new Store("tajan-josh");
 export class Game {
   constructor() {
     this.glob = globalThis;
     this.initWebSocket();
-    this.ws.onmessage = (event) => {
-      this.message(event.data);
-    };
+    this.ws.onmessage = (event) => this.message(event.data);
     const Renderer = new Render(this.ws, this.clientId, this.roomId);
     this.glob.window.onload = () => {
       this.init();
@@ -53,6 +53,14 @@ export class Game {
   connect(res) {
     this.clientId = res.clientId;
     console.log("Client id set successfully " + this.clientId);
+    let clientId = Storage.getClientId();
+    console.log(clientId);
+    clientId = this.clientId;
+    const payLoad = {
+      method: "load",
+      id: clientId
+    };
+    this.ws.send(JSON.stringify(payLoad));
   }
   turn(res) {
     const alert = document.getElementById("alert");
@@ -112,6 +120,7 @@ export class Game {
   draw(res) {
     const alert = document.getElementById("alert");
     const cards = res.cards;
+    console.log(cards);
     console.log("Room:" + this.roomId + " ; client: " + this.clientId + " ; cards: " + [cards]);
     let check = document.querySelector(".cards");
     if (check !== null)

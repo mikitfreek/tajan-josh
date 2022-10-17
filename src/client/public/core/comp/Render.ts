@@ -14,6 +14,7 @@ export class Render {
   }
 
   static createCards(data) {
+    // console.log(data)
     const cards = document.createElement('div')
     cards.className = 'cards'
 

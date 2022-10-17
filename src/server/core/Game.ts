@@ -1,3 +1,5 @@
+import { checkPrime } from "crypto"
+
 // import { Deck } from './Deck'
 const { Deck } = require('./models/Deck')
 const { Client } = require('./models/Client')
@@ -17,87 +19,76 @@ class Game {
   _rooms: any
 
   constructor() {
-    // return new Render()
-    // console.log("helloworld")
     this.clients = {}
     this.rooms = []
     this._rooms = []
   }
 
-  connect(ws, req, roomCode='') {
-    const clientName = 'client' + Object.keys(this.clients).length//req.url.replace('/?uuid=', '')
+  async connect(ws, req, roomCode) {
     // TODO Load id from cookie on comeback
-    const clientId = uuidv4();
-  
-    //if (typeof req.params.tagId !== 'undefined') ws.room = req.params.tagId
-    //else ws.room = 'lobby'
-    // const urlId = req.url.split('/')[2]
-    
-    // check if another client has same name   // ws.id = req.headers['sec-websocket-key'];
-    const clientIp = req.socket.remoteAddress;
-    const clientData = new Client(clientName, clientId, ws, clientIp, config.cardsStart)
+    let connectId = uuidv4();
 
-    this.clients[clientId] = clientData
+    console.log("Loaded ID: " + connectId)
 
-    const payLoad = {
-      'method': 'connect',
-      'clientId': clientId
-    }
-    ws.send(JSON.stringify(payLoad))
-    ///////
-  
-    // const turn = (_rooms[ws.room].last) ? : ;
-  
-    // const payLoad1 = {
-    //   'method': 'turn'
-    // }
-    // if (turn) {
-    //   const ws = clients[clientId].connection
-  
-    //   ws.send(JSON.stringify(payLoad))
-    // }
-  
-    // room.clients.forEach(c => {
-    //       let cards = []
-    //       clients[c.id].cards.forEach(card => {
-    //         cards.push(card)
-    //       })
-    //       const payLoad = {
-    //         'method': 'draw',
-    //         'cards': cards
-    //       }
-    //       clients[c.id].connection.send(JSON.stringify(payLoad))
-    //     })
-  
-    ///////////////////////
-
-    console.log('* >======== ' + clientName + ' ========>');
-    console.log('New connection: ' + clientId);
+    let clientId = connectId
+    clientId = await this.init(ws, req, connectId)
   
     // Set roomCode 
-    if(arguments.length == 3){
+    if(arguments.length === 3){
       const req = { clientId: clientId, roomId: roomCode }
       this.join(req)
     }
     else this.clients[clientId].room = 'lobby'
+    console.log(clientId)
   
-    ws.on('message', (msg) => {
-      this.message(msg)
+    // Message from client
+    ws.on('message', (msg) => this.message(msg))
+  
+    // Close
+    ws.on('close', () => {
+      // clients[clientId].active = false
+      this.deleteClientData(clientId)
+      console.log('Connection close: ' + clientId)
+      // clearInterval(id)
     })
-  
-  
     // var id = setInterval(function() {
     //   // console.log('websocket connection');
     //   ws.send(JSON.stringify(ws.id), function() {  }) //new Date()
     // }, 60000)
     // console.log(Number(Object.keys(clients).length))
-  
-    // Close
-    ws.on('close', () => {
-      // clients[clientId].active = false
-      this.clear_memory(clientId)
-      console.log('Connection close: ' + clientId)
-      // clearInterval(id)
+  }
+
+  async init(ws, req, connectId) {
+    return new Promise((resolve, reject) => {
+      const payLoad = {
+        'method': 'connect',
+        'clientId': connectId
+      }
+      ws.send(JSON.stringify(payLoad))
+
+      ws.on('message', async (msg) => {
+        let clientId
+        if (JSON.parse(msg).method !== "load")
+          clientId = connectId
+        else {
+          
+          clientId = await JSON.parse(msg).id
+          console.log(clientId)
+          // check if another client has same name   // ws.id = req.headers['sec-websocket-key'];
+          if (typeof this.clients[clientId] === "undefined") {
+            const clientIp = req.socket.remoteAddress;
+            const clientName = `client_${Object.keys(this.clients).length}_${Date.now()}`//req.url.replace('/?uuid=', '')
+
+            const clientData = new Client(clientName, clientId, ws, clientIp, config.cardsStart)
+            this.clients[clientId] = clientData
+
+            console.log('* >======== ' + clientName + ' ========>');
+            console.log('New connection: ' + clientId);
+          }
+          // return clientId
+          resolve(clientId)
+        }
+      })
     })
   }
 
@@ -111,7 +102,13 @@ class Game {
       this.draw(req)
     else if (req.method === 'move')
       this.move(req)
+    // else if (req.method === 'load')
+    //   this.load(req, clientId)
   }
+
+  //----------
+  // Messeges
+  //----------
 
   create(req) {
     const hostId = req.hostId
@@ -128,19 +125,6 @@ class Game {
     
     this.rooms[roomId] = roomData.public()
     this._rooms[roomId] = roomData.private()
-
-    // this.rooms[roomId] = {
-    //   'id': roomId,
-    //   'hostId': hostId,
-    //   'clients': []
-    // }
-
-    // this._rooms[roomId] = {
-    //   'last': 0,
-    //   'bid': null,
-    //   'clients': [],
-    //   'cards': []
-    // }
 
     this.joinRoom(hostId, this.rooms[roomId])
 
@@ -183,10 +167,7 @@ class Game {
       })
 
       console.log('Room: ' + roomId + ' joined successfully by client: ' + clientId)
-
-      // console.log('------------------------------------')
       // console.log(rooms[roomId].clients)
-      // console.log('------------------------------------')
 
       // const ws = clients[clientId].connection
       // ws.send(JSON.stringify(payLoad))
@@ -207,23 +188,11 @@ class Game {
     }
   }
 
-  joinRoom(clientId, room) {
-    let client = this.clients[clientId]
-    if (client.color === 'init')
-      client.color = randomColor()
-
-    room.clients.push({
-      'id': clientId,
-      'name': client.name,
-      'color': client.color
-    })
-  }
-
   draw(req) {
     const roomId = req.roomId
     const room = this.rooms[roomId]
 
-    const newDeck = new Deck;
+    const newDeck = new Deck();
     newDeck.shuffle()
 
     room.clients.forEach(c => {
@@ -234,13 +203,14 @@ class Game {
     for (let i = 0; i < config.cardsMax; i++)
       room.clients.forEach(c => {
         const client = this.clients[c.id]
-        if (client.score - i >= 1)
+        if (client.score - i > 0)
           this.clients[c.id].cards.push(newDeck.deal())
       })
     console.log('Rozdano karty')
 
     room.clients.forEach(c => {
-      const cards = []
+      console.log('Rozdano karty1')
+      let cards = []
       this.clients[c.id].cards.forEach(card => {
         cards.push(card)
       })
@@ -253,21 +223,6 @@ class Game {
     this.currentPlayer(roomId)
   }
 
-  currentPlayer(roomId) {
-    const room = this.rooms[roomId]
-    const _room = this._rooms[roomId]
-    const payLoad = {
-      'method': 'turn'
-    }
-    this.clients[_room.last - 1].connection.send(JSON.stringify(payLoad))
-    room.clients.forEach((c, i) => {
-      if (i !== _room.last - 1) this.clients[c.id].connection.send(JSON.stringify(payLoad))
-    })
-    // room.clients.forEach((c, i) => {
-    //   if (i === _room.last) this.clients[c.id].connection.send(JSON.stringify(payLoad))
-    // })
-  }
-
   move(req) {
     const roomId = req.roomId
     const room = this.rooms[roomId]
@@ -275,15 +230,15 @@ class Game {
     const bid = req.bid
 
     // action: raise
-    if (bid !== 'check') {
-      if (_room.bid === null) _room.bid = 0
+    if (bid === 'raise') {
+      if (_room.bid === null) this._rooms[roomId].bid = 0
       // raise = Number(); ranks[raise]
 
       // check if bid>room.lastbid
       if (bid > _room.bid) {
-        _room.bid = bid
-        ++_room.last
-        if (_room.last > room.clients.length - 1) _room.last = 0
+        this._rooms[roomId].bid = bid
+        ++this._rooms[roomId].last
+        if (_room.last >= room.clients.length) this._rooms[roomId].last = 0
         console.log('gituwa mordeczko dobry zakładzik')
         // room
 
@@ -301,130 +256,7 @@ class Game {
     }
     // action: check
     else {
-      // sum cards on hands
-      let _cards = []
-      room.clients.forEach(c => {
-        this.clients[c.id].cards.forEach(card => {
-          _cards.push(card)
-        })
-      })
-      console.log(_cards)
-
-      // check if cards contain bid
-      let counts = {
-        figures: {},
-        colors: {},
-        figuresByColors: {
-          'k': [],
-          'h': [],
-          't': [],
-          'p': []
-        }
-      };
-      // for(col in pokerColors)
-      //   counts.figuresByColors[col] = []
-
-      _cards.forEach(card => {
-        const c = counts.figures[card[0]]
-        counts.figures[card[0]] = c ? c + 1 : 1;
-        const d = counts.colors[card[1]]
-        counts.colors[card[1]] = d ? d + 1 : 1;
-        // const b = counts.figuresByColors[card[1] + card[0]]
-        // counts.figuresByColors[card[1] + card[0]] = b ? b + 1 : 1;
-
-        // if (i<1) counts.figuresByColors[card[1]] = []
-        counts.figuresByColors[card[1]].push(
-          card[0]
-        )
-      })
-      console.log('===================')
-      console.log(counts.figures)
-      console.log(counts.colors)
-      console.log(counts.figuresByColors)
-      // console.log(counts.colorsByFig['h'][pokerSymbols[4]])
-
-      // const ranks9 = [
-      //   'Royal flush',      // 09 01 02 // 9k   // 2nd color
-      //   'Straight flush',   // 08 01 09 // 89k  // 2nd color
-      //   'Four of a kind',   // 07 02 00 // 79
-      //   'Flush',            // 06 01 00 // 6k   // 2nd color
-      //   'Full house',       // 05 02 03 // 59T
-      //   'Three of a kind',  // 04 02 00 // 49
-      //   'Straight',         // 03 09 00 // 39
-      //   'Two pairs',        // 02 03 02 // 29T  03 03 02 02 // sort max to begin
-      //   'Pair',             // 01 02 00 // 19   02 02 
-      //   'High card',        // 00 02 00 // 09   02
-      // ]
-      //_bid='5QT'//'0Q'
-      // bid.match(/.{1,2}/g);
-      let _bid = bid
-      console.log(bid)
-      _bid.match(/.{1,1}/g);
-      let stat = false;
-      const f0 = counts.figures[_bid[1]],
-        f1 = counts.figures[_bid[2]],
-        c0 = counts.colors[_bid[1]]
-      switch (Number(_bid[0])) {
-        case 9: // Royal flush
-          const z = config.pokerSymbols.length - 5
-          const arr = counts.figuresByColors[_bid[1]]
-          if (arr.includes(counts.figures[config.pokerSymbols[z]])
-            && arr.includes(counts.figures[config.pokerSymbols[z + 1]])
-            && arr.includes(counts.figures[config.pokerSymbols[z + 2]])
-            && arr.includes(counts.figures[config.pokerSymbols[z + 3]])
-            && arr.includes(counts.figures[config.pokerSymbols[z + 4]])
-          ) stat = true //counts.colorsByFig[card[1]].card[0]
-          break;
-        case 8: // Straight flush
-          const w = config.pokerSymbols.indexOf(_bid[1])
-          const arr1 = counts.figuresByColors[_bid[2]]
-          if (arr1.includes(counts.figures[config.pokerSymbols[w]])
-            && arr1.includes(counts.figures[config.pokerSymbols[w + 1]])
-            && arr1.includes(counts.figures[config.pokerSymbols[w + 2]])
-            && arr1.includes(counts.figures[config.pokerSymbols[w + 3]])
-            && arr1.includes(counts.figures[config.pokerSymbols[w + 4]])
-          ) stat = true
-          break;
-        case 7: // Four of a kind
-          if (f0 >= 4) stat = true
-          break;
-        case 6: // Flush
-          if (c0 >= 4) stat = true
-          break;
-        case 5: // Full house
-          if (f0 >= 3 && f1 >= 2) stat = true
-          break;
-        case 4: // Three of a kind
-          if (f0 >= 3) stat = true
-          break;
-        case 3: // Straight
-          //f0
-          // counts.figures[_bid[1]]
-          const y = config.pokerSymbols.indexOf(_bid[1])
-          if (f0 >= 1
-            && counts.figures[config.pokerSymbols[y + 1]] >= 1
-            && counts.figures[config.pokerSymbols[y + 2]] >= 1
-            && counts.figures[config.pokerSymbols[y + 3]] >= 1
-            && counts.figures[config.pokerSymbols[y + 4]] >= 1
-          ) stat = true
-          break;
-        case 2: // Two pairs
-          if (f0 >= 2 && f1 >= 2) stat = true
-          break;
-        case 1: // Pair;
-          if (f0 >= 2) stat = true
-          break;
-        case 0: // High card
-          if (f0 >= 1) stat = true
-          break;
-      }
-
-      // const w0 = clients[room.clients[_room.last].id]
-      // const w1 = clients[room.clients[_room.last+1].id]
-
-      // rooms[roomId].clients.forEach(c => {
-      //   clients[c.id].connection.send(JSON.stringify(payLoad))
-      // })
+      const stat = this.check(room, bid)
 
       let winner = (stat) ? 1 : 0;
       //send
@@ -436,13 +268,172 @@ class Game {
         }
         this.clients[c.id].connection.send(JSON.stringify(payLoad))
       })
-      ++_room.last
-      if (_room.last > room.clients.length - 1) _room.last = 0
+      ++this._rooms[roomId].last
+      if (_room.last >= room.clients.length) this._rooms[roomId].last = 0
     }
     // ++_rooms[roomId].last
   }
 
-  clear_memory(param) {
+  //----------
+  // Methods
+  //----------
+  joinRoom(clientId, room) {
+    let client = this.clients[clientId]
+    if (client.color === 'init')
+      client.color = randomColor()
+
+    room.clients.push({
+      'id': clientId,
+      'name': client.name,
+      'color': client.color
+    })
+  }
+  currentPlayer(roomId) {
+    const room = this.rooms[roomId]
+    const _room = this._rooms[roomId]
+    const payLoad = {
+      'method': 'turn'
+    }
+    // this.clients[_room.last - 1].connection.send(JSON.stringify(payLoad))
+    room.clients.forEach((c, i) => {
+      this.clients[c.id].connection.send(JSON.stringify(payLoad)) // if (i === _room.last) 
+      console.log(c.id + " - " + i)
+    })
+    // room.clients.forEach((c, i) => {
+    //   if (i === _room.last) this.clients[c.id].connection.send(JSON.stringify(payLoad))
+    // })
+  }
+  check(room, bid) {
+    // sum cards on hands
+    let _cards = []
+    room.clients.forEach(c => {
+      this.clients[c.id].cards.forEach(card => {
+        _cards.push(card)
+      })
+    })
+    console.log(_cards)
+
+    // check if cards contain bid
+    let counts = {
+      figures: {},
+      colors: {},
+      figuresByColors: {
+        'k': [],
+        'h': [],
+        't': [],
+        'p': []
+      }
+    };
+    // for(col in pokerColors)
+    //   counts.figuresByColors[col] = []
+
+    _cards.forEach(card => {
+      const c = counts.figures[card[0]]
+      counts.figures[card[0]] = c ? c + 1 : 1;
+      const d = counts.colors[card[1]]
+      counts.colors[card[1]] = d ? d + 1 : 1;
+      // const b = counts.figuresByColors[card[1] + card[0]]
+      // counts.figuresByColors[card[1] + card[0]] = b ? b + 1 : 1;
+
+      // if (i<1) counts.figuresByColors[card[1]] = []
+      counts.figuresByColors[card[1]].push(
+        card[0]
+      )
+    })
+    console.log('===================')
+    console.log(counts.figures)
+    console.log(counts.colors)
+    console.log(counts.figuresByColors)
+    // console.log(counts.colorsByFig['h'][pokerSymbols[4]])
+
+    // const ranks9 = [
+    //   'Royal flush',      // 09 01 02 // 9k   // 2nd color
+    //   'Straight flush',   // 08 01 09 // 89k  // 2nd color
+    //   'Four of a kind',   // 07 02 00 // 79
+    //   'Flush',            // 06 01 00 // 6k   // 2nd color
+    //   'Full house',       // 05 02 03 // 59T
+    //   'Three of a kind',  // 04 02 00 // 49
+    //   'Straight',         // 03 09 00 // 39
+    //   'Two pairs',        // 02 03 02 // 29T  03 03 02 02 // sort max to begin
+    //   'Pair',             // 01 02 00 // 19   02 02 
+    //   'High card',        // 00 02 00 // 09   02
+    // ]
+    //_bid='5QT'//'0Q'
+    // bid.match(/.{1,2}/g);
+    let _bid = bid
+    console.log(bid)
+    _bid.match(/.{1,1}/g);
+    let stat = false;
+    const f0 = counts.figures[_bid[1]],
+      f1 = counts.figures[_bid[2]],
+      c0 = counts.colors[_bid[1]]
+    switch (Number(_bid[0])) {
+      case 9: // Royal flush
+        const z = config.pokerSymbols.length - 5
+        const arr = counts.figuresByColors[_bid[1]]
+        if (arr.includes(counts.figures[config.pokerSymbols[z]])
+          && arr.includes(counts.figures[config.pokerSymbols[z + 1]])
+          && arr.includes(counts.figures[config.pokerSymbols[z + 2]])
+          && arr.includes(counts.figures[config.pokerSymbols[z + 3]])
+          && arr.includes(counts.figures[config.pokerSymbols[z + 4]])
+        ) stat = true //counts.colorsByFig[card[1]].card[0]
+        break;
+      case 8: // Straight flush
+        const w = config.pokerSymbols.indexOf(_bid[1])
+        const arr1 = counts.figuresByColors[_bid[2]]
+        if (arr1.includes(counts.figures[config.pokerSymbols[w]])
+          && arr1.includes(counts.figures[config.pokerSymbols[w + 1]])
+          && arr1.includes(counts.figures[config.pokerSymbols[w + 2]])
+          && arr1.includes(counts.figures[config.pokerSymbols[w + 3]])
+          && arr1.includes(counts.figures[config.pokerSymbols[w + 4]])
+        ) stat = true
+        break;
+      case 7: // Four of a kind
+        if (f0 >= 4) stat = true
+        break;
+      case 6: // Flush
+        if (c0 >= 4) stat = true
+        break;
+      case 5: // Full house
+        if (f0 >= 3 && f1 >= 2) stat = true
+        break;
+      case 4: // Three of a kind
+        if (f0 >= 3) stat = true
+        break;
+      case 3: // Straight
+        //f0
+        // counts.figures[_bid[1]]
+        const y = config.pokerSymbols.indexOf(_bid[1])
+        if (f0 >= 1
+          && counts.figures[config.pokerSymbols[y + 1]] >= 1
+          && counts.figures[config.pokerSymbols[y + 2]] >= 1
+          && counts.figures[config.pokerSymbols[y + 3]] >= 1
+          && counts.figures[config.pokerSymbols[y + 4]] >= 1
+        ) stat = true
+        break;
+      case 2: // Two pairs
+        if (f0 >= 2 && f1 >= 2) stat = true
+        break;
+      case 1: // Pair;
+        if (f0 >= 2) stat = true
+        break;
+      case 0: // High card
+        if (f0 >= 1) stat = true
+        break;
+    }
+    return stat
+    // const w0 = clients[room.clients[_room.last].id]
+    // const w1 = clients[room.clients[_room.last+1].id]
+
+    // rooms[roomId].clients.forEach(c => {
+    //   clients[c.id].connection.send(JSON.stringify(payLoad))
+    // })
+  }
+
+  //----------
+  // Destroy
+  //----------
+  deleteClientData(param) {
     const clientId = param
     const roomId = this.clients[clientId].room 
     if (typeof this.rooms !== 'undefined' && roomId !== 'lobby' && roomId !== 'init') {
@@ -473,6 +464,9 @@ class Game {
     } delete this.clients[clientId]
   }
 
+  //----------
+  // Security
+  //----------
   overloadProtection(ws, clientId) {
     const payLoad = {
       'method': 'error',

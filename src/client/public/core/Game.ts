@@ -1,6 +1,8 @@
+import { Store } from './comp/Store.js'
 import { Render } from './comp/Render.js'
 import { Debug } from './comp/Debug.js'
 
+const Storage = new Store("tajan-josh");
 
 export class Game {
   clientId
@@ -12,9 +14,7 @@ export class Game {
     this.glob = globalThis;
     this.initWebSocket()
     
-    this.ws.onmessage = (event) => {
-      this.message(event.data)
-    };
+    this.ws.onmessage = (event) => this.message(event.data)
 
     const Renderer = new Render(this.ws, this.clientId, this.roomId)
 
@@ -76,6 +76,28 @@ export class Game {
     // ws.send(clientId)
     this.clientId = res.clientId
     console.log('Client id set successfully ' + this.clientId)
+
+    // get clientId from local storage
+    let clientId = Storage.getClientId()
+    console.log(clientId)
+
+    // COMMENTED FOR DEBUGGING
+    // // if clientId exists locally
+    // if (clientId?.length === 36) {
+    //   this.clientId = clientId // set local id
+    //   this.ws.send(JSON.stringify(payLoad))
+    // } 
+    // // update id if empty
+    // else {
+    //   Storage.update(this.clientId)
+      clientId = this.clientId // set new id
+    // }
+    // END
+    const payLoad = {
+      'method': 'load',
+      'id': clientId
+    }
+    this.ws.send(JSON.stringify(payLoad))
   }
 
   turn(res) {
@@ -165,6 +187,7 @@ export class Game {
   draw(res) {
     const alert = document.getElementById('alert')
     const cards = res.cards
+    console.log(cards)
     console.log('Room:' + this.roomId + ' ; client: ' + this.clientId + ' ; cards: ' + [cards])
 
     let check = document.querySelector('.cards')
