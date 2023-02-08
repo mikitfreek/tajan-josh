@@ -96,6 +96,20 @@ body {
   align-items: center; */
 }
 
+@media screen and (max-width: 540px) {
+  .cards>div {
+    margin: 0 .3em;
+    height: 105px;
+  }
+}
+
+@media screen and (max-width: 380px) {
+  .cards>div {
+    margin: 0 .07em;
+    height: 97px;
+  }
+}
+
 .card .label {
   display: flex;
   justify-content: flex-start;

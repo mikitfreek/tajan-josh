@@ -22,21 +22,21 @@ class Host {
   roomCodes: any
 
   constructor() {
-    this.roomCodes=[]
+    // this.roomCodes=[]
     const wss = this.initWebSocketServer()
 
     const Session = new Game()
 
     wss.on('connection', async (ws, req) => {
       
-      // Session.connect(ws, req)
-      if (this.roomCodes.length !== 0) {
-        const code = this.roomCodes[0];
-        delete this.roomCodes[0]
-        Session.connect(ws, req, code)
-        console.log('Joincode: ' + code + '\n\n' + this.roomCodes)
-      } else
-        Session.connect(ws, req)
+      Session.connect(ws, req)
+      // if (this.roomCodes.length !== 0) {
+      //   const code = this.roomCodes[0];
+      //   delete this.roomCodes[0]
+      //   Session.connect(ws, req, code)
+      //   console.log('Joincode: ' + code + '\n\n' + this.roomCodes)
+      // } else
+      //   Session.connect(ws, req)
     })
   }
   
@@ -97,25 +97,26 @@ class Host {
     //   // }
     // });
 
-    app.get('/r/:roomId', async (req, res) => {
-      const roomId = req.params.roomId
-      const param = roomId !== 'favicon.ico' && 
-                   !roomId.includes('index') &&
-                    roomId.length === 8 ? 1 : 0
-      if (param) {
-        console.log('app.get: ' + roomId)
-        this.roomCodes.push(roomId)
-        // res.sendFile(__dirname + '/../public/index.html');
-        res.redirect('back');
-        // res.send("hello")
-        // res.render('index');
+    // moved to client side as a request send to server
+    // app.get('/r/:roomId', async (req, res) => {
+    //   const roomId = req.params.roomId
+    //   const param = roomId !== 'favicon.ico' && 
+    //                !roomId.includes('index') &&
+    //                 roomId.length === 8 ? 1 : 0
+    //   if (param) {
+    //     console.log('app.get: ' + roomId)
+    //     this.roomCodes.push(roomId)
+    //     // res.sendFile(__dirname + '/../public/index.html');
+    //     res.redirect('back');
+    //     // res.send("hello")
+    //     // res.render('index');
 
-        // app.use(function (req, res, next) {
-        //   require(__dirname + '/../web/')(req, res, next)
-        // })
-        // express.static(__dirname + '/../web')
-      } else res.redirect('back');
-    });
+    //     // app.use(function (req, res, next) {
+    //     //   require(__dirname + '/../web/')(req, res, next)
+    //     // })
+    //     // express.static(__dirname + '/../web')
+    //   } else res.redirect('back');
+    // });
 
     app.use(express.static(__dirname + '/../../public'));
     // app.use('/game', express.static(__dirname + '/../public'));

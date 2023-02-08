@@ -10,7 +10,7 @@ export class Store extends EventTarget {
     this.getClientId = () => this.tajan.id;
   }
   _readStorage() {
-    this.tajan = JSON.parse(window.localStorage.getItem(this.localStorageKey) || Object());
+    this.tajan = JSON.parse(window.localStorage.getItem(this.localStorageKey) || "{}");
   }
   _save() {
     window.localStorage.setItem(this.localStorageKey, JSON.stringify(this.tajan));

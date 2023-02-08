@@ -3,11 +3,11 @@ export class Debug {
   roomId
   ws
 
-  constructor(ws, clientId, roomId) {
-    this.ws = ws
-    this.clientId = clientId
-    this.roomId = roomId
-  }
+  constructor() { }
+
+  setWs = (ws) => this.ws = ws
+  setClientId = (clientId) => this.clientId = clientId
+  setRoomId = (roomId) => this.roomId = roomId
 
   interface() {
     const bidd = document.createElement('input')
@@ -17,7 +17,7 @@ export class Debug {
 
     const btnBid = document.createElement('button')
     btnBid.id = 'bid'
-    btnBid.innerText = 'bid'
+    btnBid.innerText = 'raise'
     document.body.append(btnBid)
     btnBid.addEventListener('click', e => {
       const payLoad = {

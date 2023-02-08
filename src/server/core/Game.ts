@@ -1,4 +1,4 @@
-import { checkPrime } from "crypto"
+// import { checkPrime } from "crypto"
 
 // import { Deck } from './Deck'
 const { Deck } = require('./models/Deck')
@@ -7,11 +7,15 @@ const { Room } = require('./models/Room')
 
 const { v4: uuidv4 } = require('uuid')
 
+const { Logs } = require('./Logs')
+const Logger = new Logs()
 // Import
 const config = require('../game.config.json')
 const hostconfig = require('../host.config.json')
 
 const randomColor = () => { return Math.floor(Math.random() * 16777215).toString(16) }
+
+const HOST_SERVER = 'https://infinite-mesa-09265.herokuapp.com'
 
 class Game {
   clients: any
@@ -24,31 +28,34 @@ class Game {
     this._rooms = []
   }
 
-  async connect(ws, req, roomCode) {
-    // TODO Load id from cookie on comeback
-    let connectId = uuidv4();
+  async connect(ws, req) { //, roomCode
+    let connectionId = uuidv4();
+    Logger.log("New connection: " + connectionId, 'warning')
 
-    console.log("Loaded ID: " + connectId)
-
-    let clientId = connectId
-    clientId = await this.init(ws, req, connectId)
-  
-    // Set roomCode 
-    if(arguments.length === 3){
-      const req = { clientId: clientId, roomId: roomCode }
-      this.join(req)
+    // let clientId = connectionId
+    // clientId = this.init(ws, connectId) //await; , req
+    const payLoad = {
+      'method': 'connect',
+      'clientId': connectionId
     }
-    else this.clients[clientId].room = 'lobby'
-    console.log(clientId)
+    ws.send(JSON.stringify(payLoad))
+  
+    // refactored: Set roomCode 
+    // if(arguments.length === 3){
+    //   const req = { clientId: clientId, roomId: roomCode }
+    //   this.join(req)
+    // }
+    // else this.clients[clientId].room = 'lobby'
+    // console.log(clientId)
   
     // Message from client
-    ws.on('message', (msg) => this.message(msg))
+    ws.on('message', (msg) => this.message(msg, ws, connectionId))
   
     // Close
     ws.on('close', () => {
       // clients[clientId].active = false
-      this.deleteClientData(clientId)
-      console.log('Connection close: ' + clientId)
+      // this.deleteClientData(clientId) // important
+      Logger.log('Connection closed: ' + connectionId, 'warning')
       // clearInterval(id)
     })
     // var id = setInterval(function() {
@@ -58,68 +65,115 @@ class Game {
     // console.log(Number(Object.keys(clients).length))
   }
 
-  async init(ws, req, connectId) {
-    return new Promise((resolve, reject) => {
-      const payLoad = {
-        'method': 'connect',
-        'clientId': connectId
-      }
-      ws.send(JSON.stringify(payLoad))
+  // async init(ws, req, connectId) {
+  //   return new Promise((resolve, reject) => {
+  //     const payLoad = {
+  //       'method': 'connect',
+  //       'clientId': connectId
+  //     }
+  //     ws.send(JSON.stringify(payLoad))
 
-      ws.on('message', async (msg) => {
-        let clientId
-        if (JSON.parse(msg).method !== "load")
-          clientId = connectId
-        else {
+  //     ws.on('message', async (msg) => {
+  //       let clientId
+  //       if (JSON.parse(msg).method !== "load")
+  //         clientId = connectId
+  //       else {
           
-          clientId = await JSON.parse(msg).id
-          console.log(clientId)
-          // check if another client has same name   // ws.id = req.headers['sec-websocket-key'];
-          if (typeof this.clients[clientId] === "undefined") {
-            const clientIp = req.socket.remoteAddress;
-            const clientName = `client_${Object.keys(this.clients).length}_${Date.now()}`//req.url.replace('/?uuid=', '')
+  //         clientId = await JSON.parse(msg).id
+  //         console.log(clientId)
+  //         // check if another client has same name   // ws.id = req.headers['sec-websocket-key'];
+  //         if (typeof this.clients[clientId] === "undefined") {
+  //           const clientIp = req.socket.remoteAddress;
+  //           const clientName = `client_${Object.keys(this.clients).length}_${Date.now()}`//req.url.replace('/?uuid=', '')
 
-            const clientData = new Client(clientName, clientId, ws, clientIp, config.cardsStart)
-            this.clients[clientId] = clientData
+  //           const clientData = new Client(clientName, clientId, ws, clientIp, config.cardsStart)
+  //           this.clients[clientId] = clientData
 
-            console.log('* >======== ' + clientName + ' ========>');
-            console.log('New connection: ' + clientId);
-          }
-          // return clientId
-          resolve(clientId)
-        }
-      })
-    })
-  }
+  //           console.log('* >======== ' + clientName + ' ========>');
+  //           console.log('New connection: ' + clientId);
+  //         }
+  //         // return clientId
+  //         resolve(clientId)
+  //       }
+  //     })
+  //   })
+  // }
 
-  message(msg) {
+  message(msg, ws, connectionId) {
     const req = JSON.parse(msg) //.utf8Data
-    if (req.method === 'create')
+    if (req.method === 'load')
+      this.load(req, ws, connectionId)
+    else if (req.method === 'create')
       this.create(req)
-    else if (req.method === 'join')
+    else if (req.method === 'request-join')
       this.join(req)
+    // else if (req.method === 'join')
+    //   this.join(req)
     else if (req.method === 'draw')
       this.draw(req)
     else if (req.method === 'move')
       this.move(req)
-    // else if (req.method === 'load')
-    //   this.load(req, clientId)
+
+
+    Logger.print(req)
   }
 
   //----------
   // Messeges
   //----------
 
+  load(req, ws, connectionId) {
+    // validate
+    const clientId = req.id?.length === 36 ? req.id : connectionId
+    let _clientName, clientUndefined = false;
+    // check if another client has same name   // ws.id = req.headers['sec-websocket-key'];
+    if (typeof this.clients[clientId] === "undefined") {
+      clientUndefined = true
+      const clientIp = ws._socket?.remoteAddress //req.socket.remoteAddress;
+      const elapsed = Date.now();
+      const now = new Date(elapsed);
+      const clientName = `client_${now.getDate()}_${now.getMonth() + 1}_${now.getHours()}${now.getMinutes()}_${now.getSeconds()}_${now.getMilliseconds()}`//req.url.replace('/?uuid=', '') // ${Object.keys(this.clients).length}
+      _clientName= clientName
+
+      const clientData = new Client(clientName, clientId, ws, clientIp, config.cardsStart)
+      this.clients[clientId] = clientData
+    }
+
+    if (clientId !== connectionId && clientUndefined) {
+      Logger.log('* >======== ' + _clientName + ' ========>', 'info');
+      Logger.log('Client got back after a while: ' + clientId, 'info');
+    }
+    else if (clientId !== connectionId && !clientUndefined) {
+      Logger.log('* >======== ' + _clientName + ' ========>', 'info');
+      Logger.log('Loaded exiting client: ' + clientId, 'info');
+    }
+    else if (clientId === connectionId && clientUndefined) {
+      Logger.log('* >======== ' + _clientName + ' ========>', 'info');
+      Logger.log('New client: ' + clientId, 'info');
+    }
+    else if (clientId === connectionId && !clientUndefined) {
+      Logger.log('* >======== ' + _clientName + ' ========>', 'info');
+      Logger.log('Memory is has not been delated', 'warning');
+      Logger.log('Loaded exiting client: ' + clientId, 'info');
+    }
+    else {
+      Logger.log('* >======== ' + _clientName + ' ========>', 'info');
+      Logger.log('WTF is happening?', 'warning');
+      Logger.log('Loaded exiting client: ' + clientId, 'info');
+    }
+  }
+
   create(req) {
-    const hostId = req.hostId
+    // validate
+    const hostId = req.hostId?.length === 36 ? req.hostId : 0//connectionId
     // TODO: Give another client host if previons left lobby
     const roomId = hostId.split('-')[0]
     // client.room = roomId
     this.clients[hostId].room = roomId
-    console.log('Room created successfully by client: ' + hostId + ', with id: ' + roomId)
-    console.log((process.env.PORT!==undefined) 
-    ? `https://infinite-mesa-09265.herokuapp.com:${process.env.PORT}/r/${roomId}` 
-    : `http://localhost:${hostconfig.port}/r/${roomId}`)
+    Logger.log('Room created successfully by client: ' + hostId + ', with id: ' + roomId)
+    Logger.log((process.env.PORT!==undefined) 
+    ? `${HOST_SERVER}${process.env.PORT!='' ? `: ${process.env.PORT}` : ''}/#${roomId}` 
+    : `http://localhost:${hostconfig.port}/#${roomId}`)
 
     const roomData = new Room(roomId, hostId)
     
@@ -139,8 +193,9 @@ class Game {
   }
 
   join(req) {
-    const clientId = req.clientId
-    const roomId = req.roomId
+    // validate
+    const clientId = req.clientId?.length === 36 ? req.clientId : 0 //connectionId
+    const roomId = req.roomId?.length === 8 ? req.roomId : 0
     // if exists
     if (typeof this.rooms[roomId] !== 'undefined') {
       // client.room = roomId
@@ -152,7 +207,7 @@ class Game {
       if ((typeof this.rooms[roomId].clients !== 'undefined'
         && this.rooms[roomId].clients.some(c => c.id !== clientId))
         || typeof this.rooms[roomId].clients === 'undefined')
-        console.log('HERE')
+        Logger.log(': room clients undefined')
 
       this.joinRoom(clientId, this.rooms[roomId])
 
@@ -166,7 +221,7 @@ class Game {
         this.clients[c.id].connection.send(JSON.stringify(payLoad))
       })
 
-      console.log('Room: ' + roomId + ' joined successfully by client: ' + clientId)
+      Logger.log('Room: ' + roomId + ' joined successfully by client: ' + clientId)
       // console.log(rooms[roomId].clients)
 
       // const ws = clients[clientId].connection
@@ -174,7 +229,7 @@ class Game {
     }
     // if doesnt exist
     else {
-      console.log('Get Down! Client ' + clientId + ' is shooting!!')
+      Logger.log('Get Down! Client ' + clientId + ' is shooting!! (unmatched room code)')
       const payLoad = {
         'method': 'error',
         'info': 'Room not found'
@@ -206,10 +261,10 @@ class Game {
         if (client.score - i > 0)
           this.clients[c.id].cards.push(newDeck.deal())
       })
-    console.log('Rozdano karty')
+    Logger.log('Dealing cards in room: ' + room.id)
 
     room.clients.forEach(c => {
-      console.log('Rozdano karty1')
+      Logger.log(c.id + ' received cards')
       let cards = []
       this.clients[c.id].cards.forEach(card => {
         cards.push(card)
@@ -239,7 +294,7 @@ class Game {
         this._rooms[roomId].bid = bid
         ++this._rooms[roomId].last
         if (_room.last >= room.clients.length) this._rooms[roomId].last = 0
-        console.log('gituwa mordeczko dobry zakładzik')
+        Logger.log('gituwa mordeczko dobry zakładzik')
         // room
 
         //send
@@ -252,7 +307,7 @@ class Game {
         })
         this.currentPlayer(roomId)
       } // else report error
-      else console.log('Error: smaller bid')
+      else Logger.log('Error: smaller bid detected')
     }
     // action: check
     else {
@@ -277,6 +332,7 @@ class Game {
   //----------
   // Methods
   //----------
+
   joinRoom(clientId, room) {
     let client = this.clients[clientId]
     if (client.color === 'init')
@@ -288,6 +344,7 @@ class Game {
       'color': client.color
     })
   }
+
   currentPlayer(roomId) {
     const room = this.rooms[roomId]
     const _room = this._rooms[roomId]
@@ -297,21 +354,22 @@ class Game {
     // this.clients[_room.last - 1].connection.send(JSON.stringify(payLoad))
     room.clients.forEach((c, i) => {
       this.clients[c.id].connection.send(JSON.stringify(payLoad)) // if (i === _room.last) 
-      console.log(c.id + " - " + i)
+      Logger.log(c.id + " - " + i)
     })
     // room.clients.forEach((c, i) => {
     //   if (i === _room.last) this.clients[c.id].connection.send(JSON.stringify(payLoad))
     // })
   }
+
   check(room, bid) {
     // sum cards on hands
     let _cards = []
-    room.clients.forEach(c => {
+    room.clients?.forEach(c => {
       this.clients[c.id].cards.forEach(card => {
         _cards.push(card)
       })
     })
-    console.log(_cards)
+    Logger.log(_cards)
 
     // check if cards contain bid
     let counts = {
@@ -340,10 +398,10 @@ class Game {
         card[0]
       )
     })
-    console.log('===================')
-    console.log(counts.figures)
-    console.log(counts.colors)
-    console.log(counts.figuresByColors)
+    Logger.log('===================')
+    Logger.log(counts.figures)
+    Logger.log(counts.colors)
+    Logger.log(counts.figuresByColors)
     // console.log(counts.colorsByFig['h'][pokerSymbols[4]])
 
     // const ranks9 = [
@@ -361,7 +419,7 @@ class Game {
     //_bid='5QT'//'0Q'
     // bid.match(/.{1,2}/g);
     let _bid = bid
-    console.log(bid)
+    Logger.log(bid)
     _bid.match(/.{1,1}/g);
     let stat = false;
     const f0 = counts.figures[_bid[1]],
@@ -433,6 +491,7 @@ class Game {
   //----------
   // Destroy
   //----------
+
   deleteClientData(param) {
     const clientId = param
     const roomId = this.clients[clientId].room 
@@ -450,7 +509,7 @@ class Game {
         this.rooms[roomId].clients.forEach((c, i) => {
           if (c.id === clientId) {
             if (this.rooms[roomId].clients.length === 1) {
-              console.log('deleted empty room: ' + roomId)
+              Logger.log('deleted empty room: ' + roomId)
               delete this.rooms[roomId]
             } else
             delete this.rooms[roomId].clients[i]
@@ -467,6 +526,7 @@ class Game {
   //----------
   // Security
   //----------
+
   overloadProtection(ws, clientId) {
     const payLoad = {
       'method': 'error',
@@ -475,18 +535,19 @@ class Game {
     const limit = 3, burst = 2, burstTime = 1000, burstDelay = 5000
       if (this.clients[clientId].counters.limit >= limit) {
         if (this.clients[clientId].counters.burst >= burst) {
-          console.log('* Leaking * :: ' + clientId)
+          Logger.log('* Leaking * :: ' + clientId)
         }
         ++this.clients[clientId].counters.burst
         setTimeout(() => {
           ws.send(JSON.stringify(payLoad))
-          console.log('* Block * :: ' + clientId)
+          Logger.log('* Block * :: ' + clientId)
           setTimeout(_ => --this.clients[clientId].counters.burst, burstTime)
         }, burstDelay)
       }
       ++this.clients[clientId].counters.limit
   }
 }
+
 module.exports = { Game }
 
 // const { join } = require('path')

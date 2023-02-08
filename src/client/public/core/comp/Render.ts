@@ -23,7 +23,7 @@ export class Render {
       card.className = 'card'
       const label = document.createElement('div')
       label.className = 'label'
-      if (data[i][1] === 'h' || data[i][1] === 'd')
+      if (data[i][1] === 'h' || data[i][1] === 'k')
         label.className += ' red'
       for (let k = 0; k < 2; k++) {
         const span = document.createElement('span')

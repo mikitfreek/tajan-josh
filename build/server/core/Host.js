@@ -7,17 +7,10 @@ const app = express();
 const server = createServer(app);
 class Host {
   constructor() {
-    this.roomCodes = [];
     const wss = this.initWebSocketServer();
     const Session = new Game();
     wss.on("connection", async (ws, req) => {
-      if (this.roomCodes.length !== 0) {
-        const code = this.roomCodes[0];
-        delete this.roomCodes[0];
-        Session.connect(ws, req, code);
-        console.log("Joincode: " + code + "\n\n" + this.roomCodes);
-      } else
-        Session.connect(ws, req);
+      Session.connect(ws, req);
     });
   }
   initWs() {
@@ -27,16 +20,6 @@ class Host {
     return new WsServer.Server(options);
   }
   async initHttpServer(port) {
-    app.get("/r/:roomId", async (req, res) => {
-      const roomId = req.params.roomId;
-      const param = roomId !== "favicon.ico" && !roomId.includes("index") && roomId.length === 8 ? 1 : 0;
-      if (param) {
-        console.log("app.get: " + roomId);
-        this.roomCodes.push(roomId);
-        res.redirect("back");
-      } else
-        res.redirect("back");
-    });
     app.use(express.static(__dirname + "/../../public"));
     server.listen(process.env.PORT || port, () => {
       console.log("Server is working on: ");

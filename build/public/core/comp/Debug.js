@@ -1,8 +1,8 @@
 export class Debug {
-  constructor(ws, clientId, roomId) {
-    this.ws = ws;
-    this.clientId = clientId;
-    this.roomId = roomId;
+  constructor() {
+    this.setWs = (ws) => this.ws = ws;
+    this.setClientId = (clientId) => this.clientId = clientId;
+    this.setRoomId = (roomId) => this.roomId = roomId;
   }
   interface() {
     const bidd = document.createElement("input");
@@ -11,7 +11,7 @@ export class Debug {
     document.body.append(bidd);
     const btnBid = document.createElement("button");
     btnBid.id = "bid";
-    btnBid.innerText = "bid";
+    btnBid.innerText = "raise";
     document.body.append(btnBid);
     btnBid.addEventListener("click", (e) => {
       const payLoad = {
