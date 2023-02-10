@@ -3,7 +3,7 @@ const WsServer = require('ws')
 const { createServer } = require('http')
 const { Game } = require('./Game')
 
-const config = require('../host.config.json')
+const HOST_CONFIG = require('../host.config.json')
 
 // const ENV_PROD = process.env.NODE_ENV === 'production'
 // const ENV_DEV = process.env.NODE_ENV === 'develop'
@@ -140,7 +140,7 @@ class Host {
     return app
   }
   
-  initWebSocketServer(port = config.port) {
+  initWebSocketServer(port = HOST_CONFIG.port) {
     this.initHttpServer(port)
     const wss = this.initWs()
   

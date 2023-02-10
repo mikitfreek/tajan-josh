@@ -154,6 +154,7 @@ export class Game {
     })
 
     // TODO: disable hash handler for a room host hash change
+    // https://stackoverflow.com/questions/13233914/prevent-window-onhashchange-from-executing-when-hash-is-set-via-javascript
     // this.hashHandlerFlag = false
     // glob.location.replace('#' + this.roomId)
     // this.hashHandlerFlag = true

@@ -10,26 +10,27 @@ const { v4: uuidv4 } = require('uuid')
 const { Logs } = require('./Logs')
 const Logger = new Logs()
 // Import
-const config = require('../game.config.json')
-const hostconfig = require('../host.config.json')
+const CONFIG = require('../game.config.json')
+const HOST_CONFIG = require('../host.config.json')
+const HOST_SERVER = 'https://infinite-mesa-09265.herokuapp.com'
 
 const randomColor = () => { return Math.floor(Math.random() * 16777215).toString(16) }
 
-const HOST_SERVER = 'https://infinite-mesa-09265.herokuapp.com'
-
 class Game {
   clients: any
+  clientsIds: any
   rooms: any
   _rooms: any
 
   constructor() {
     this.clients = {}
+    this.clientsIds = []
     this.rooms = []
     this._rooms = []
   }
 
   async connect(ws, req) { //, roomCode
-    let connectionId = uuidv4();
+    const connectionId = uuidv4();
     Logger.log("New connection: " + connectionId, 'warning')
 
     // let clientId = connectionId
@@ -54,8 +55,9 @@ class Game {
     // Close
     ws.on('close', () => {
       // clients[clientId].active = false
-      // this.deleteClientData(clientId) // important
-      Logger.log('Connection closed: ' + connectionId, 'warning')
+      const clientId = this.clientsIds[connectionId]
+      this.deleteClientData(connectionId, clientId) // TODO: important
+      Logger.log('Connection closed: ' + clientId, 'warning')
       // clearInterval(id)
     })
     // var id = setInterval(function() {
@@ -125,6 +127,7 @@ class Game {
   load(req, ws, connectionId) {
     // validate
     const clientId = req.id?.length === 36 ? req.id : connectionId
+    this.clientsIds[connectionId] = clientId
     let _clientName, clientUndefined = false;
     // check if another client has same name   // ws.id = req.headers['sec-websocket-key'];
     if (typeof this.clients[clientId] === "undefined") {
@@ -135,7 +138,7 @@ class Game {
       const clientName = `client_${now.getDate()}_${now.getMonth() + 1}_${now.getHours()}${now.getMinutes()}_${now.getSeconds()}_${now.getMilliseconds()}`//req.url.replace('/?uuid=', '') // ${Object.keys(this.clients).length}
       _clientName= clientName
 
-      const clientData = new Client(clientName, clientId, ws, clientIp, config.cardsStart)
+      const clientData = new Client(clientName, clientId, ws, clientIp, CONFIG.cardsStart)
       this.clients[clientId] = clientData
     }
 
@@ -173,7 +176,7 @@ class Game {
     Logger.log('Room created successfully by client: ' + hostId + ', with id: ' + roomId)
     Logger.log((process.env.PORT!==undefined) 
     ? `${HOST_SERVER}${process.env.PORT!='' ? `: ${process.env.PORT}` : ''}/#${roomId}` 
-    : `http://localhost:${hostconfig.port}/#${roomId}`)
+    : `http://localhost:${HOST_CONFIG.port}/#${roomId}`)
 
     const roomData = new Room(roomId, hostId)
     
@@ -255,7 +258,7 @@ class Game {
     })
     // Draw cards
     // 2 times for all, then only for
-    for (let i = 0; i < config.cardsMax; i++)
+    for (let i = 0; i < CONFIG.cardsMax; i++)
       room.clients.forEach(c => {
         const client = this.clients[c.id]
         if (client.score - i > 0)
@@ -427,23 +430,23 @@ class Game {
       c0 = counts.colors[_bid[1]]
     switch (Number(_bid[0])) {
       case 9: // Royal flush
-        const z = config.pokerSymbols.length - 5
+        const z = CONFIG.pokerSymbols.length - 5
         const arr = counts.figuresByColors[_bid[1]]
-        if (arr.includes(counts.figures[config.pokerSymbols[z]])
-          && arr.includes(counts.figures[config.pokerSymbols[z + 1]])
-          && arr.includes(counts.figures[config.pokerSymbols[z + 2]])
-          && arr.includes(counts.figures[config.pokerSymbols[z + 3]])
-          && arr.includes(counts.figures[config.pokerSymbols[z + 4]])
+        if (arr.includes(counts.figures[CONFIG.pokerSymbols[z]])
+          && arr.includes(counts.figures[CONFIG.pokerSymbols[z + 1]])
+          && arr.includes(counts.figures[CONFIG.pokerSymbols[z + 2]])
+          && arr.includes(counts.figures[CONFIG.pokerSymbols[z + 3]])
+          && arr.includes(counts.figures[CONFIG.pokerSymbols[z + 4]])
         ) stat = true //counts.colorsByFig[card[1]].card[0]
         break;
       case 8: // Straight flush
-        const w = config.pokerSymbols.indexOf(_bid[1])
+        const w = CONFIG.pokerSymbols.indexOf(_bid[1])
         const arr1 = counts.figuresByColors[_bid[2]]
-        if (arr1.includes(counts.figures[config.pokerSymbols[w]])
-          && arr1.includes(counts.figures[config.pokerSymbols[w + 1]])
-          && arr1.includes(counts.figures[config.pokerSymbols[w + 2]])
-          && arr1.includes(counts.figures[config.pokerSymbols[w + 3]])
-          && arr1.includes(counts.figures[config.pokerSymbols[w + 4]])
+        if (arr1.includes(counts.figures[CONFIG.pokerSymbols[w]])
+          && arr1.includes(counts.figures[CONFIG.pokerSymbols[w + 1]])
+          && arr1.includes(counts.figures[CONFIG.pokerSymbols[w + 2]])
+          && arr1.includes(counts.figures[CONFIG.pokerSymbols[w + 3]])
+          && arr1.includes(counts.figures[CONFIG.pokerSymbols[w + 4]])
         ) stat = true
         break;
       case 7: // Four of a kind
@@ -461,12 +464,12 @@ class Game {
       case 3: // Straight
         //f0
         // counts.figures[_bid[1]]
-        const y = config.pokerSymbols.indexOf(_bid[1])
+        const y = CONFIG.pokerSymbols.indexOf(_bid[1])
         if (f0 >= 1
-          && counts.figures[config.pokerSymbols[y + 1]] >= 1
-          && counts.figures[config.pokerSymbols[y + 2]] >= 1
-          && counts.figures[config.pokerSymbols[y + 3]] >= 1
-          && counts.figures[config.pokerSymbols[y + 4]] >= 1
+          && counts.figures[CONFIG.pokerSymbols[y + 1]] >= 1
+          && counts.figures[CONFIG.pokerSymbols[y + 2]] >= 1
+          && counts.figures[CONFIG.pokerSymbols[y + 3]] >= 1
+          && counts.figures[CONFIG.pokerSymbols[y + 4]] >= 1
         ) stat = true
         break;
       case 2: // Two pairs
@@ -492,8 +495,10 @@ class Game {
   // Destroy
   //----------
 
-  deleteClientData(param) {
-    const clientId = param
+  deleteClientData(param1, param2) {
+    const connectionId = param1
+    const clientId = param2
+   
     const roomId = this.clients[clientId].room 
     if (typeof this.rooms !== 'undefined' && roomId !== 'lobby' && roomId !== 'init') {
 
@@ -520,7 +525,9 @@ class Game {
           }
         })
       }
-    } delete this.clients[clientId]
+    } 
+    delete this.clients[clientId]
+    delete this.clientsIds[connectionId]
   }
 
   //----------
