@@ -37,7 +37,7 @@ export class Render {
   }
 
   renderSidebar() {
-    const ui: any = document.getElementById('renderUi')
+    const ui: any = document.getElementById('UI')
     const menu = document.getElementById('menu')
 
     menu.onclick = () => {

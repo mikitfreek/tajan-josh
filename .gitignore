@@ -34,6 +34,7 @@ node_modules
 
 # Dist and OSX
 dist
+build
 lib
 .DS_Store
 

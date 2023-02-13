@@ -1,5 +1,6 @@
 import { Store } from './comp/Store.js'
 import { Render } from './comp/Render.js'
+import { View } from './View.js'
 
 const Storage = new Store("tajan-josh");
 const glob = globalThis
@@ -23,6 +24,9 @@ export class Game {
 
     const Renderer = new Render(this.ws, this.clientId, this.roomId)
 
+    const ViewNow = new View()
+    ViewNow.init()
+
     glob.window.onload = () => {
 
       this.init()
@@ -38,7 +42,7 @@ export class Game {
   }
 
   initWebSocket() {
-    const host = glob.location.origin.replace(/^http/, 'ws')
+    const host = glob.location.origin.replace(/^(http|https)/, 'ws') // /^http/
     this.ws = new WebSocket(host)
 
     Debugger.setWs(this.ws)
@@ -147,7 +151,7 @@ export class Game {
     const alert = glob.document.getElementById('alert')
     this.roomId = res.room.id
     const clientId = res.room.hostId
-    Logger.log('Room created successfully by client: ' + clientId + ', with id: ' + this.roomId, 'success')
+    Logger.log(`Room created successfully by client: ${clientId}, with id: ${this.roomId}`, 'success')
     // console.log(glob.location.origin + '/r/' + roomId)
     glob.navigator.clipboard.writeText(glob.location.origin + '/#' + this.roomId).then(res => {
       console.log(`${glob.location.origin + '/#' + this.roomId} - copied to clipboard`);
@@ -197,7 +201,7 @@ export class Game {
     const alert = glob.document.getElementById('alert')
     this.roomId = res.room.id
     if (this.clientId === 'undefined') this.clientId = res.clientId
-    Logger.log('Room:' + this.roomId + ' joined successfully by client: ' + this.clientId, 'success')
+    Logger.log(`Room: ${this.roomId} joined successfully by client: ${this.clientId}`, 'success')
     // const alert = glob.document.getElementById('alert')
 
     if (this.clientId === res.clientId) {
@@ -228,7 +232,7 @@ export class Game {
 
   turn(res) {
     const alert = glob.document.getElementById('alert')
-    Logger.log('Now is client: ' + this.clientId + ' turn, from room id: ' + this.roomId, 'info')
+    Logger.log(`Now is client: ${this.clientId} turn, from room id: ${this.roomId}`, 'info')
     // const alert0 = glob.document.getElementById('alert')
 
     while (alert.children.length >= 1)
@@ -242,7 +246,7 @@ export class Game {
     const alert = glob.document.getElementById('alert')
     const cards = res.cards
     Logger.print(cards)
-    Logger.log('Room:' + this.roomId + ' ; client: ' + this.clientId + ' ; cards: ' + [cards])
+    Logger.log(`Room: ${this.roomId}, client: ${this.clientId}, cards: ${[cards]}`)
 
     let check = glob.document.querySelector('.cards')
     if (check !== null) glob.document.body.removeChild(check)
