@@ -1,6 +1,7 @@
 // import { Parser } from './Parser'
-import { Bid } from './Bid.js'
-import * as params from './params.js'
+import { View } from './comp/View.js'
+import { Bid } from './comp/Bid.js'
+import * as params from './comp/params.js'
 
 export class Render {
   ws
@@ -11,6 +12,9 @@ export class Render {
     this.ws = ws
     this.clientId = clientId
     this.roomId = roomId
+
+    const ViewNow = new View()
+    ViewNow.init()
   }
 
   static createCards(data) {

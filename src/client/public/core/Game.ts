@@ -1,14 +1,13 @@
 import { Store } from './comp/Store.js'
-import { Render } from './comp/Render.js'
-import { View } from './View.js'
+import { Render } from './Render.js'
 
 const Storage = new Store("tajan-josh");
 const glob = globalThis
 
-import { Logs } from './comp/Logs.js'
+import { Logs } from '../utils/Logs.js'
 const Logger = new Logs()
 
-import { Debug } from './comp/Debug.js'
+import { Debug } from '../utils/Debug.js'
 const Debugger = new Debug()
 
 export class Game {
@@ -23,9 +22,6 @@ export class Game {
     this.ws.onmessage = (event) => this.message(event.data)
 
     const Renderer = new Render(this.ws, this.clientId, this.roomId)
-
-    const ViewNow = new View()
-    ViewNow.init()
 
     glob.window.onload = () => {
 
@@ -232,13 +228,25 @@ export class Game {
 
   turn(res) {
     const alert = glob.document.getElementById('alert')
-    Logger.log(`Now is client: ${this.clientId} turn, from room id: ${this.roomId}`, 'info')
+    Logger.log(`Now is your turn, client: ${this.clientId} from room id: ${this.roomId}`, 'info')
     // const alert0 = glob.document.getElementById('alert')
 
     while (alert.children.length >= 1)
       alert.removeChild(alert.lastChild);
     const p0 = glob.document.createElement('p')
     p0.innerText = `Now is your turn!`
+    alert.append(p0)
+  }
+
+  now(res) {
+    const alert = glob.document.getElementById('alert')
+    Logger.log(`Now is client: ${res.name} turn, from room id: ${this.roomId}`, 'info')
+    // const alert0 = glob.document.getElementById('alert')
+
+    while (alert.children.length >= 1)
+      alert.removeChild(alert.lastChild);
+    const p0 = glob.document.createElement('p')
+    p0.innerText = `Waiting for ${res.name} move`
     alert.append(p0)
   }
 

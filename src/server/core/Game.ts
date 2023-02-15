@@ -7,7 +7,7 @@ const { Room } = require('./models/Room')
 
 const { v4: uuidv4 } = require('uuid')
 
-const { Logs } = require('./Logs')
+const { Logs } = require('../utils/Logs')
 const Logger = new Logs()
 // Import
 const CONFIG = require('../game.config.json')
@@ -30,41 +30,59 @@ class Game {
   }
 
   async connect(ws, req) { //, roomCode
-    const connectionId = uuidv4();
-    Logger.log("New connection: " + connectionId, 'warning')
+    try {
+      const connectionId = uuidv4();
+      Logger.log("New connection: " + connectionId, 'warning')
 
-    // let clientId = connectionId
-    // clientId = this.init(ws, connectId) //await; , req
-    const payLoad = {
-      'method': 'connect',
-      'clientId': connectionId
+      // let clientId = connectionId
+      // clientId = this.init(ws, connectId) //await; , req
+      const payLoad = {
+        'method': 'connect',
+        'clientId': connectionId
+      }
+      ws.send(JSON.stringify(payLoad))
+    
+      // refactored: Set roomCode 
+      // if(arguments.length === 3){
+      //   const req = { clientId: clientId, roomId: roomCode }
+      //   this.join(req)
+      // }
+      // else this.clients[clientId].room = 'lobby'
+      // console.log(clientId)
+      
+      // Message from client
+      ws.on('message', async (msg) => {
+        try {
+          this.message(msg, ws, connectionId)
+        }
+        catch (err: any) {
+          Logger.log(err.stack, 'error')
+        }
+      })
+      // use req for ip gethering
+      
+      // Close
+      ws.on('close', async () => {
+        try {
+          // clients[clientId].active = false
+          const clientId = this.clientsIds[connectionId]
+          this.deleteClientData(connectionId, clientId) // TODO: important
+          Logger.log('Connection closed: ' + clientId, 'warning')
+          // clearInterval(id)
+        }
+        catch (err: any) {
+          Logger.log(err.stack, 'error')
+        }
+      })
+      // var id = setInterval(function() {
+      //   // console.log('websocket connection');
+      //   ws.send(JSON.stringify(ws.id), function() {  }) //new Date()
+      // }, 60000)
+      // console.log(Number(Object.keys(clients).length))
     }
-    ws.send(JSON.stringify(payLoad))
-  
-    // refactored: Set roomCode 
-    // if(arguments.length === 3){
-    //   const req = { clientId: clientId, roomId: roomCode }
-    //   this.join(req)
-    // }
-    // else this.clients[clientId].room = 'lobby'
-    // console.log(clientId)
-  
-    // Message from client
-    ws.on('message', (msg) => this.message(msg, ws, connectionId))
-  
-    // Close
-    ws.on('close', () => {
-      // clients[clientId].active = false
-      const clientId = this.clientsIds[connectionId]
-      this.deleteClientData(connectionId, clientId) // TODO: important
-      Logger.log('Connection closed: ' + clientId, 'warning')
-      // clearInterval(id)
-    })
-    // var id = setInterval(function() {
-    //   // console.log('websocket connection');
-    //   ws.send(JSON.stringify(ws.id), function() {  }) //new Date()
-    // }, 60000)
-    // console.log(Number(Object.keys(clients).length))
+    catch (err: any) {
+      Logger.log(err.stack, 'error')
+    }
   }
 
   // async init(ws, req, connectId) {
@@ -143,25 +161,25 @@ class Game {
     }
 
     if (clientId !== connectionId && clientUndefined) {
-      Logger.log('* >======== ' + _clientName + ' ========>', 'info');
+      Logger.log('* >======== ' + _clientName + ' ========>', _clientName !== undefined ? 'info' : 'error');
       Logger.log('Client got back after a while: ' + clientId, 'info');
     }
     else if (clientId !== connectionId && !clientUndefined) {
-      Logger.log('* >======== ' + _clientName + ' ========>', 'info');
+      Logger.log('* >======== ' + _clientName + ' ========>', _clientName !== undefined ? 'info' : 'error');
       Logger.log('Loaded exiting client: ' + clientId, 'info');
     }
     else if (clientId === connectionId && clientUndefined) {
-      Logger.log('* >======== ' + _clientName + ' ========>', 'info');
+      Logger.log('* >======== ' + _clientName + ' ========>', _clientName !== undefined ? 'info' : 'error');
       Logger.log('New client: ' + clientId, 'info');
     }
     else if (clientId === connectionId && !clientUndefined) {
-      Logger.log('* >======== ' + _clientName + ' ========>', 'info');
-      Logger.log('Memory is has not been delated', 'warning');
+      Logger.log('* >======== ' + _clientName + ' ========>', _clientName !== undefined ? 'info' : 'error');
+      Logger.log('Memory is has not been deleted', 'error');
       Logger.log('Loaded exiting client: ' + clientId, 'info');
     }
     else {
-      Logger.log('* >======== ' + _clientName + ' ========>', 'info');
-      Logger.log('WTF is happening?', 'warning');
+      Logger.log('* >======== ' + _clientName + ' ========>', _clientName !== undefined ? 'info' : 'error');
+      Logger.log('WTF is happening?', 'error');
       Logger.log('Loaded exiting client: ' + clientId, 'info');
     }
   }
@@ -231,19 +249,7 @@ class Game {
       // ws.send(JSON.stringify(payLoad))
     }
     // if doesnt exist
-    else {
-      Logger.log('Get Down! Client ' + clientId + ' is shooting!! (unmatched room code)')
-      const payLoad = {
-        'method': 'error',
-        'info': 'Room not found'
-      }
-
-      const ws = this.clients[clientId].connection
-
-      ws.send(JSON.stringify(payLoad))
-
-      this.overloadProtection(ws, clientId)
-    }
+    else this.overloadCheck(clientId)
   }
 
   draw(req) {
@@ -285,50 +291,14 @@ class Game {
     const roomId = req.roomId
     const room = this.rooms[roomId]
     const _room = this._rooms[roomId]
-    const bid = req.bid
+    const type = req.type
 
     // action: raise
-    if (bid === 'raise') {
-      if (_room.bid === null) this._rooms[roomId].bid = 0
-      // raise = Number(); ranks[raise]
-
-      // check if bid>room.lastbid
-      if (bid > _room.bid) {
-        this._rooms[roomId].bid = bid
-        ++this._rooms[roomId].last
-        if (_room.last >= room.clients.length) this._rooms[roomId].last = 0
-        Logger.log('gituwa mordeczko dobry zakładzik')
-        // room
-
-        //send
-        room.clients.forEach(c => {
-          const payLoad = {
-            'method': 'move',
-            'type': 'raise'
-          }
-          this.clients[c.id].connection.send(JSON.stringify(payLoad))
-        })
-        this.currentPlayer(roomId)
-      } // else report error
-      else Logger.log('Error: smaller bid detected')
-    }
+    if (type === 'raise') this.raise(roomId, room, _room, req.bid)
     // action: check
-    else {
-      const stat = this.check(room, bid)
-
-      let winner = (stat) ? 1 : 0;
-      //send
-      room.clients.forEach(c => {
-        const payLoad = {
-          'method': 'move',
-          'type': 'check',
-          'stat': winner
-        }
-        this.clients[c.id].connection.send(JSON.stringify(payLoad))
-      })
-      ++this._rooms[roomId].last
-      if (_room.last >= room.clients.length) this._rooms[roomId].last = 0
-    }
+    else if (type === 'check') this.check(roomId, room, _room)
+    // error
+    else Logger.log(`wrong move message`, 'error')
     // ++_rooms[roomId].last
   }
 
@@ -344,8 +314,35 @@ class Game {
     room.clients.push({
       'id': clientId,
       'name': client.name,
-      'color': client.color
+      'color': client.color,
+      'active': true
     })
+  }
+
+  raise(roomId, room, _room, bid) {
+    if (_room.bid === null) this._rooms[roomId].bid = 0
+    // raise = Number(); ranks[raise]
+
+    // check if bid>room.lastbid
+    if (bid > _room.bid) {
+      this._rooms[roomId].bid = bid
+      ++this._rooms[roomId].last
+      if (_room.last >= room.clients.length) this._rooms[roomId].last = 0
+      Logger.log('gituwa mordeczko dobry zakładzik')
+      // room
+
+      //send
+      room.clients.forEach(c => {
+        const payLoad = {
+          'method': 'move',
+          'type': 'raise',
+          'bid': bid
+        }
+        this.clients[c.id].connection.send(JSON.stringify(payLoad))
+      })
+      this.currentPlayer(roomId)
+    } // else report error
+    else Logger.log('smaller bid detected', 'error')
   }
 
   currentPlayer(roomId) {
@@ -354,17 +351,54 @@ class Game {
     const payLoad = {
       'method': 'turn'
     }
+    const payLoadNow = {
+      'method': 'now',
+      'name': room.clients[this._rooms[roomId].last].name
+    }
     // this.clients[_room.last - 1].connection.send(JSON.stringify(payLoad))
+    // TODO: send only to current player
     room.clients.forEach((c, i) => {
-      this.clients[c.id].connection.send(JSON.stringify(payLoad)) // if (i === _room.last) 
-      Logger.log(c.id + " - " + i)
+      if(i === this._rooms[roomId].last) {
+        this.clients[c.id].connection.send(JSON.stringify(payLoad)) // if (i === _room.last) 
+        Logger.log(`turn: ${c.id} [${i}]`)
+      }
+      else if (i !== this._rooms[roomId].last) {
+        this.clients[c.id].connection.send(JSON.stringify(payLoadNow))
+        Logger.log(`send: ${c.id} [${i}] ${this.rooms[roomId].clients[i].active === false ? 'inactive' : ''}`)
+      }
+      else Logger.log(`while sending turn message`, 'error')
     })
     // room.clients.forEach((c, i) => {
     //   if (i === _room.last) this.clients[c.id].connection.send(JSON.stringify(payLoad))
     // })
   }
 
-  check(room, bid) {
+  check(roomId, room, _room) {
+    const stat = this.checkBid(room, _room)
+
+    let winner = (stat) ? 1 : 0;
+    //send
+    room.clients.forEach(c => {
+      const payLoad = {
+        'method': 'move',
+        'type': 'check',
+        'stat': winner
+      }
+      this.clients[c.id].connection.send(JSON.stringify(payLoad))
+    })
+
+    // itterate through inactive players ro get next player
+    for (let i = 0; i < room.clients.length; i++) {
+      ++this._rooms[roomId].last
+      if (this._rooms[roomId].last >= room.clients.length) 
+        this._rooms[roomId].last = 0
+      if (room.clients[this._rooms[roomId].last].active === true)
+        break;
+    }
+  }
+
+  checkBid(room, _room) {
+    const bid = _room.bid
     // sum cards on hands
     let _cards = []
     room.clients?.forEach(c => {
@@ -401,10 +435,10 @@ class Game {
         card[0]
       )
     })
-    Logger.log('===================')
-    Logger.log(counts.figures)
-    Logger.log(counts.colors)
-    Logger.log(counts.figuresByColors)
+    // Logger.log('===================')
+    Logger.print(counts.figures)
+    Logger.print(counts.colors)
+    Logger.print(counts.figuresByColors)
     // console.log(counts.colorsByFig['h'][pokerSymbols[4]])
 
     // const ranks9 = [
@@ -425,9 +459,9 @@ class Game {
     Logger.log(bid)
     _bid.match(/.{1,1}/g);
     let stat = false;
-    const f0 = counts.figures[_bid[1]],
-      f1 = counts.figures[_bid[2]],
-      c0 = counts.colors[_bid[1]]
+    const figuresFirst = counts.figures[_bid[1]],
+      figuresSecond = counts.figures[_bid[2]],
+      colors = counts.colors[_bid[1]]
     switch (Number(_bid[0])) {
       case 9: // Royal flush
         const z = CONFIG.pokerSymbols.length - 5
@@ -450,22 +484,22 @@ class Game {
         ) stat = true
         break;
       case 7: // Four of a kind
-        if (f0 >= 4) stat = true
+        if (figuresFirst >= 4) stat = true
         break;
       case 6: // Flush
-        if (c0 >= 4) stat = true
+        if (colors >= 4) stat = true
         break;
       case 5: // Full house
-        if (f0 >= 3 && f1 >= 2) stat = true
+        if (figuresFirst >= 3 && figuresSecond >= 2) stat = true
         break;
       case 4: // Three of a kind
-        if (f0 >= 3) stat = true
+        if (figuresFirst >= 3) stat = true
         break;
       case 3: // Straight
         //f0
         // counts.figures[_bid[1]]
         const y = CONFIG.pokerSymbols.indexOf(_bid[1])
-        if (f0 >= 1
+        if (figuresFirst >= 1
           && counts.figures[CONFIG.pokerSymbols[y + 1]] >= 1
           && counts.figures[CONFIG.pokerSymbols[y + 2]] >= 1
           && counts.figures[CONFIG.pokerSymbols[y + 3]] >= 1
@@ -473,13 +507,13 @@ class Game {
         ) stat = true
         break;
       case 2: // Two pairs
-        if (f0 >= 2 && f1 >= 2) stat = true
+        if (figuresFirst >= 2 && figuresSecond >= 2) stat = true
         break;
       case 1: // Pair;
-        if (f0 >= 2) stat = true
+        if (figuresFirst >= 2) stat = true
         break;
       case 0: // High card
-        if (f0 >= 1) stat = true
+        if (figuresFirst >= 1) stat = true
         break;
     }
     return stat
@@ -499,6 +533,8 @@ class Game {
     const connectionId = param1
     const clientId = param2
    
+    // TODO: what if player opened multiple tabs with sessions, closed them
+    //       and then reloaded last session
     const roomId = this.clients[clientId].room 
     if (typeof this.rooms !== 'undefined' && roomId !== 'lobby' && roomId !== 'init') {
 
@@ -517,7 +553,10 @@ class Game {
               Logger.log('deleted empty room: ' + roomId)
               delete this.rooms[roomId]
             } else
-            delete this.rooms[roomId].clients[i]
+            // delete this.rooms[roomId].clients[i]
+            // instead make player inactive
+            this.rooms[roomId].clients[i].active = false
+
             // if (this.rooms[roomId].clients.length === 0) {
             //   console.log('deleted empty room: ' + roomId)
             //   delete this.rooms[roomId]
@@ -526,13 +565,29 @@ class Game {
         })
       }
     } 
-    delete this.clients[clientId]
+    // allow disconected player to comeback
+    // only delete when the game in a room ends
+    // delete this.clients[clientId] 
     delete this.clientsIds[connectionId]
   }
 
   //----------
   // Security
   //----------
+
+  overloadCheck(clientId) {
+    Logger.log('Get Down! Client ' + clientId + ' is shooting!! (unmatched room code)')
+    const payLoad = {
+      'method': 'error',
+      'info': 'Room not found'
+    }
+
+    const ws = this.clients[clientId].connection
+
+    ws.send(JSON.stringify(payLoad))
+
+    this.overloadProtection(ws, clientId)
+  }
 
   overloadProtection(ws, clientId) {
     const payLoad = {

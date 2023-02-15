@@ -22,6 +22,7 @@ export class Debug {
     btnBid.addEventListener('click', e => {
       const payLoad = {
         'method': 'move',
+        'type': 'raise',
         'roomId': this.roomId,
         'clientId': this.clientId,
         'bid': bidd.value
@@ -36,9 +37,9 @@ export class Debug {
     btnCheck.addEventListener('click', e => {
       const payLoad = {
         'method': 'move',
+        'type': 'check',
         'roomId': this.roomId,
         'clientId': this.clientId,
-        'bid': 'check'
       }
       this.ws.send(JSON.stringify(payLoad))
     })

@@ -28,7 +28,6 @@ class Host {
     const Session = new Game()
 
     wss.on('connection', async (ws, req) => {
-      
       Session.connect(ws, req)
       // if (this.roomCodes.length !== 0) {
       //   const code = this.roomCodes[0];
