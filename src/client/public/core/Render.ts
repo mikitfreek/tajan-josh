@@ -76,9 +76,9 @@ export class Render {
     }
   }
 
-  updateUI() {
+  updateUI(bid) {
     /////////////////
-    let bid = '090102'; // output from server ------> client  // ['K','K','Q','Q','Q']
+    // let bid = '090102'; // output from server ------> client  // ['K','K','Q','Q','Q']
     // let cards = 'AhApAtKkKp'; // - ,, -
     // /////////////////
 

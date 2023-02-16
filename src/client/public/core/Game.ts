@@ -11,25 +11,30 @@ import { Debug } from '../utils/Debug.js'
 const Debugger = new Debug()
 
 export class Game {
+  Renderer
   clientId
   roomId
   ws
   hashHandlerFlag = true
+  joining = false
 
   constructor() {
     this.initWebSocket()
     
-    this.ws.onmessage = (event) => this.message(event.data)
+    this.ws.onmessage = async (event) => this.message(event.data)
 
-    const Renderer = new Render(this.ws, this.clientId, this.roomId)
+    this.Renderer = new Render(this.ws, this.clientId, this.roomId)
 
     glob.window.onload = () => {
 
-      this.init()
+      if (!this.joining) this.init()
 
-      Renderer.renderSidebar()
-      Renderer.toggleDarkMode()
-      Renderer.updateUI()
+      Debugger.setWs(this.ws)
+      Debugger.interface()
+
+      this.Renderer.renderSidebar()
+      this.Renderer.toggleDarkMode()
+      // Renderer.updateUI()
     }
     // if (typeof clientId === "undefined") {
     //   let _cards_ = createCards([['A','h'],['K','d'],['T','c'],['9','s']])
@@ -40,8 +45,6 @@ export class Game {
   initWebSocket() {
     const host = glob.location.origin.replace(/^(http|https)/, 'ws') // /^http/
     this.ws = new WebSocket(host)
-
-    Debugger.setWs(this.ws)
   }
 
   init() {
@@ -62,14 +65,13 @@ export class Game {
     })
     alert.append(d)
     //////////////////////////////////
-
-    Debugger.interface()
   }
 
   hashHandler() {
     if (glob.location.hash === ""
     || glob.location.hash === "#") { } // do nothing
     else if (glob.location.hash.length === 9) {
+      this.joining = true
       const roomCode = glob.location.hash.substring(1)
       const req = { clientId: this.clientId, roomId: roomCode }
       this.requestJoin(req)
@@ -95,7 +97,7 @@ export class Game {
     else if (res.method === 'join')
       this.joined(res)
     else if (res.method === 'turn')
-      this.turn(res)
+      this.turn()
     else if (res.method === 'draw')
       this.drawed(res)
     else if (res.method === 'move')
@@ -137,7 +139,8 @@ export class Game {
     // room code handlers
     this.hashHandler()
     glob.window.onhashchange = () => {
-      if (this.hashHandlerFlag) this.hashHandler()
+      if (this.hashHandlerFlag) 
+        this.hashHandler()
     }
 
     Debugger.setClientId(this.clientId)
@@ -226,7 +229,7 @@ export class Game {
     Debugger.setRoomId(this.roomId)
   }
 
-  turn(res) {
+  turn() {
     const alert = glob.document.getElementById('alert')
     Logger.log(`Now is your turn, client: ${this.clientId} from room id: ${this.roomId}`, 'info')
     // const alert0 = glob.document.getElementById('alert')
@@ -271,32 +274,37 @@ export class Game {
 
   moved(res) {
     const alert = glob.document.getElementById('alert')
+
     while (alert.children.length >= 1)
       alert.removeChild(alert.lastChild);
-    if (res.type === 'check') {
-      if (res.stat === 1) {
-        //wygrany
-        while (alert.children.length >= 1)
-          alert.removeChild(alert.lastChild);
-        const p = glob.document.createElement('p')
-        p.innerText = `Wygrany: ${this.roomId}`
-        alert.append(p)
-      } else {
-        //przegrany
-        while (alert.children.length >= 1)
-          alert.removeChild(alert.lastChild);
-        const p = glob.document.createElement('p')
-        p.innerText = `Przegrany: ${this.roomId}`
-        alert.append(p)
-      }
-    } else {
-      //raise
-      //const alert = glob.document.getElementById('alert')
-      while (alert.children.length >= 1)
-        alert.removeChild(alert.lastChild);
-      const p = glob.document.createElement('p')
-      p.innerText = `Raise: ${this.roomId}`
-      alert.append(p)
-    }
+
+    if (res.type === 'check')
+      this.checked(res, alert)
+    else if (res.type === 'raise')
+      this.raised(res, alert)
+    else Logger.log(`wrong move message: type`, 'error')
+  }
+
+  checked(res, alert) {
+    while (alert.children.length >= 1)
+      alert.removeChild(alert.lastChild);
+    const p = glob.document.createElement('p')
+    // wygrane
+    if (res.stat === 1) p.innerText = `Wygrany: ${this.roomId}`
+    // przegrany
+    else if (res.stat === 0) p.innerText = `Przegrany: ${this.roomId}`
+    else Logger.log(`wrong move message: stat`, 'error')
+    alert.append(p)
+
+    // TODO: disply all cards
+  }
+
+  raised(res, alert) {
+    this.Renderer.updateUI(res.bid)
+    while (alert.children.length >= 1)
+      alert.removeChild(alert.lastChild);
+    const p = glob.document.createElement('p')
+    p.innerText = `Raise: ${this.roomId}`
+    alert.append(p)
   }
 }
