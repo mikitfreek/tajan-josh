@@ -9,8 +9,8 @@ class Client {
       'ip': clientIp,
       'room': 'init',
       'color': 'init',
-      'score': cardsStart,
-      'cards': [],
+      'score': cardsStart, // move to _room
+      'cards': [],         // same here
       'counters': {
         'limit': 0,
         'burst': 0

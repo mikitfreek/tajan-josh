@@ -130,7 +130,7 @@ class Game {
     // else if (req.method === 'join')
     //   this.join(req)
     else if (req.method === 'draw')
-      this.draw(req)
+      this.firstDraw(req)
     else if (req.method === 'move')
       this.move(req)
 
@@ -145,6 +145,7 @@ class Game {
   load(req, ws, connectionId) {
     // validate
     const clientId = req.id?.length === 36 ? req.id : connectionId
+
     this.clientsIds[connectionId] = clientId
     let _clientName, clientUndefined = false;
     // check if another client has same name   // ws.id = req.headers['sec-websocket-key'];
@@ -160,27 +161,20 @@ class Game {
       this.clients[clientId] = clientData
     }
 
-    if (clientId !== connectionId && clientUndefined) {
-      Logger.log('* >======== ' + _clientName + ' ========>', _clientName !== undefined ? 'info' : 'error');
-      Logger.log('Client got back after a while: ' + clientId, 'info');
-    }
-    else if (clientId !== connectionId && !clientUndefined) {
-      Logger.log('* >======== ' + _clientName + ' ========>', _clientName !== undefined ? 'info' : 'error');
-      Logger.log('Loaded exiting client: ' + clientId, 'info');
-    }
-    else if (clientId === connectionId && clientUndefined) {
-      Logger.log('* >======== ' + _clientName + ' ========>', _clientName !== undefined ? 'info' : 'error');
-      Logger.log('New client: ' + clientId, 'info');
-    }
+    Logger.log('* >======== ' + _clientName + ' ========>', _clientName !== undefined ? 'info' : 'error')
+    if (clientId !== connectionId && clientUndefined)
+      Logger.log('Client got back after a while: ' + clientId, 'info')
+    else if (clientId !== connectionId && !clientUndefined)
+      Logger.log('Loaded exiting client: ' + clientId, 'info')
+    else if (clientId === connectionId && clientUndefined)
+      Logger.log('New client: ' + clientId, 'info')
     else if (clientId === connectionId && !clientUndefined) {
-      Logger.log('* >======== ' + _clientName + ' ========>', _clientName !== undefined ? 'info' : 'error');
-      Logger.log('Memory is has not been deleted', 'error');
-      Logger.log('Loaded exiting client: ' + clientId, 'info');
+      Logger.log('Memory is has not been deleted', 'error')
+      Logger.log('Loaded exiting client: ' + clientId, 'info')
     }
     else {
-      Logger.log('* >======== ' + _clientName + ' ========>', _clientName !== undefined ? 'info' : 'error');
       Logger.log('WTF is happening?', 'error');
-      Logger.log('Loaded exiting client: ' + clientId, 'info');
+      Logger.log('Loaded exiting client: ' + clientId, 'info')
     }
   }
 
@@ -252,39 +246,12 @@ class Game {
     else this.overloadCheck(clientId)
   }
 
-  draw(req) {
+  firstDraw(req) {
     const roomId = req.roomId
     const room = this.rooms[roomId]
 
-    const newDeck = new Deck();
-    newDeck.shuffle()
-
-    room.clients.forEach(c => {
-      this.clients[c.id].cards = []
-    })
-    // Draw cards
-    // 2 times for all, then only for
-    for (let i = 0; i < CONFIG.cardsMax; i++)
-      room.clients.forEach(c => {
-        const client = this.clients[c.id]
-        if (client.score - i > 0)
-          this.clients[c.id].cards.push(newDeck.deal())
-      })
-    Logger.log('Dealing cards in room: ' + room.id)
-
-    room.clients.forEach(c => {
-      Logger.log(c.id + ' received cards')
-      let cards = []
-      this.clients[c.id].cards.forEach(card => {
-        cards.push(card)
-      })
-      const payLoad = {
-        'method': 'draw',
-        'cards': cards
-      }
-      this.clients[c.id].connection.send(JSON.stringify(payLoad))
-    })
-    this.currentPlayer(roomId)
+    this.draw(room)
+    this.play(roomId)
   }
 
   move(req) {
@@ -319,6 +286,37 @@ class Game {
     })
   }
 
+  draw(room) {
+    const newDeck = new Deck();
+    newDeck.shuffle()
+
+    room.clients.forEach(c => {
+      this.clients[c.id].cards = []
+    })
+    // Draw cards
+    // 2 times for all, then only for
+    for (let i = 0; i < CONFIG.cardsMax; i++)
+      room.clients.forEach(c => {
+        const client = this.clients[c.id]
+        if (client.score - i > 0)
+          this.clients[c.id].cards.push(newDeck.deal())
+      })
+    Logger.log('Dealing cards in room: ' + room.id)
+
+    room.clients.forEach(c => {
+      Logger.log(c.id + ' received cards')
+      let cards = []
+      this.clients[c.id].cards.forEach(card => {
+        cards.push(card)
+      })
+      const payLoad = {
+        'method': 'draw',
+        'cards': cards
+      }
+      this.clients[c.id].connection.send(JSON.stringify(payLoad))
+    })
+  }
+
   raise(roomId, room, _room, bid) {
     if (_room.bid === null) this._rooms[roomId].bid = 0
     // raise = Number(); ranks[raise]
@@ -326,26 +324,45 @@ class Game {
     // check if bid>room.lastbid
     if (bid > _room.bid) {
       this._rooms[roomId].bid = bid
-      ++this._rooms[roomId].last
-      if (_room.last >= room.clients.length) this._rooms[roomId].last = 0
+      // moved to getNextPlayer
+      // ++this._rooms[roomId].last
+      // if (_room.last >= room.clients.length) this._rooms[roomId].last = 0
+
       Logger.log('gituwa mordeczko dobry zakładzik')
-      // room
 
       //send
+      const current = room.clients[this._rooms[roomId].player.next].name
       room.clients.forEach(c => {
         const payLoad = {
           'method': 'move',
           'type': 'raise',
+          'name': current,
           'bid': bid
         }
         this.clients[c.id].connection.send(JSON.stringify(payLoad))
       })
-      this.currentPlayer(roomId)
+      this.getNextPlayer(roomId, room)
+      this.draw(room)
+      this.play(roomId)
     } // else report error
     else Logger.log('smaller bid detected', 'error')
   }
 
-  currentPlayer(roomId) {
+  getNextPlayer(roomId, room) {
+    // save last player to enable checking by next player
+    this._rooms[roomId].player.last = this._rooms[roomId].player.next
+
+    // itterate through inactive players ro get next player
+    for (let i = 0; i < room.clients.length; i++) {
+      ++this._rooms[roomId].player.next
+      if (this._rooms[roomId].player.next >= room.clients.length) 
+        this._rooms[roomId].player.next = 0
+      if (room.clients[this._rooms[roomId].player.next].active === true)
+        break;
+    }
+  }
+
+  play(roomId) {
     const room = this.rooms[roomId]
     const _room = this._rooms[roomId]
     const payLoad = {
@@ -353,16 +370,16 @@ class Game {
     }
     const payLoadNow = {
       'method': 'now',
-      'name': room.clients[this._rooms[roomId].last].name
+      'name': room.clients[this._rooms[roomId].player.next].name
     }
     // this.clients[_room.last - 1].connection.send(JSON.stringify(payLoad))
     // TODO: send only to current player
     room.clients.forEach((c, i) => {
-      if(i === this._rooms[roomId].last) {
+      if(i === this._rooms[roomId].player.next) {
         this.clients[c.id].connection.send(JSON.stringify(payLoad)) // if (i === _room.last) 
         Logger.log(`turn: ${c.id} [${i}]`)
       }
-      else if (i !== this._rooms[roomId].last) {
+      else if (i !== this._rooms[roomId].player.next) {
         this.clients[c.id].connection.send(JSON.stringify(payLoadNow))
         Logger.log(`send: ${c.id} [${i}] ${this.rooms[roomId].clients[i].active === false ? 'inactive' : ''}`)
       }
@@ -374,27 +391,35 @@ class Game {
   }
 
   check(roomId, room, _room) {
-    const stat = this.checkBid(room, _room)
+    const { stat, cards } = this.checkBid(room, _room)
 
     let winner = (stat) ? 1 : 0;
+    
+    // ++card counter
+    // if (winner) // _room.clients[this._rooms[roomId].player.last].name
+    // else
+
     //send
+    const victim = room.clients[this._rooms[roomId].player.last].name
+    const checker = room.clients[this._rooms[roomId].player.next].name
+
     room.clients.forEach(c => {
       const payLoad = {
         'method': 'move',
         'type': 'check',
-        'stat': winner
+        'names': {
+          'names': victim,
+          'victim': checker
+        },
+        'stat': winner,
+        'cards': cards
       }
       this.clients[c.id].connection.send(JSON.stringify(payLoad))
     })
-
-    // itterate through inactive players ro get next player
-    for (let i = 0; i < room.clients.length; i++) {
-      ++this._rooms[roomId].last
-      if (this._rooms[roomId].last >= room.clients.length) 
-        this._rooms[roomId].last = 0
-      if (room.clients[this._rooms[roomId].last].active === true)
-        break;
-    }
+    
+    this.getNextPlayer(roomId, room)
+    this.draw(room)
+    this.play(roomId)
   }
 
   checkBid(room, _room) {
@@ -516,7 +541,8 @@ class Game {
         if (figuresFirst >= 1) stat = true
         break;
     }
-    return stat
+    const cards = counts.figuresByColors
+    return { stat, cards }
     // const w0 = clients[room.clients[_room.last].id]
     // const w1 = clients[room.clients[_room.last+1].id]
 
