@@ -342,7 +342,7 @@ class Game {
         this.clients[c.id].connection.send(JSON.stringify(payLoad))
       })
       this.getNextPlayer(roomId, room)
-      this.draw(room)
+      // this.draw(room)
       this.play(roomId)
     } // else report error
     else Logger.log('smaller bid detected', 'error')
@@ -391,27 +391,26 @@ class Game {
   }
 
   check(roomId, room, _room) {
-    const { stat, cards } = this.checkBid(room, _room)
+    const { verdict, cards } = this.checkBid(room, _room)
 
-    let winner = (stat) ? 1 : 0;
-    
+    const checker = room.clients[this._rooms[roomId].player.next]
+    const victim = room.clients[this._rooms[roomId].player.last]
+
+    // let winner = (verdict) ? 1 : 0;
+
     // ++card counter
-    // if (winner) // _room.clients[this._rooms[roomId].player.last].name
-    // else
-
-    //send
-    const victim = room.clients[this._rooms[roomId].player.last].name
-    const checker = room.clients[this._rooms[roomId].player.next].name
+    if (verdict) ++this.clients[victim.id].score
+    else ++this.clients[checker.id].score
 
     room.clients.forEach(c => {
       const payLoad = {
         'method': 'move',
         'type': 'check',
         'names': {
-          'names': victim,
-          'victim': checker
+          'checker': checker.name,
+          'victim': victim.name
         },
-        'stat': winner,
+        'verdict': Number(verdict),
         'cards': cards
       }
       this.clients[c.id].connection.send(JSON.stringify(payLoad))
@@ -424,6 +423,10 @@ class Game {
 
   checkBid(room, _room) {
     const bid = _room.bid
+
+    // final verdict
+    let verdict = false;
+    
     // sum cards on hands
     let _cards = []
     room.clients?.forEach(c => {
@@ -434,6 +437,7 @@ class Game {
     Logger.log(_cards)
 
     // check if cards contain bid
+    // sort tables
     let counts = {
       figures: {},
       colors: {},
@@ -447,6 +451,7 @@ class Game {
     // for(col in pokerColors)
     //   counts.figuresByColors[col] = []
 
+    // sort cards to check
     _cards.forEach(card => {
       const c = counts.figures[card[0]]
       counts.figures[card[0]] = c ? c + 1 : 1;
@@ -483,10 +488,12 @@ class Game {
     let _bid = bid
     Logger.log(bid)
     _bid.match(/.{1,1}/g);
-    let stat = false;
-    const figuresFirst = counts.figures[_bid[1]],
-      figuresSecond = counts.figures[_bid[2]],
-      colors = counts.colors[_bid[1]]
+    
+    // values to check
+    const figuresFirst = counts.figures[CONFIG.pokerSymbols[_bid[1]]],
+      figuresSecond = counts.figures[CONFIG.pokerSymbols[_bid[2]]],
+      colors = counts.colors[CONFIG.pokerColors[_bid[1]]]
+    
     switch (Number(_bid[0])) {
       case 9: // Royal flush
         const z = CONFIG.pokerSymbols.length - 5
@@ -496,7 +503,7 @@ class Game {
           && arr.includes(counts.figures[CONFIG.pokerSymbols[z + 2]])
           && arr.includes(counts.figures[CONFIG.pokerSymbols[z + 3]])
           && arr.includes(counts.figures[CONFIG.pokerSymbols[z + 4]])
-        ) stat = true //counts.colorsByFig[card[1]].card[0]
+        ) verdict = true //counts.colorsByFig[card[1]].card[0]
         break;
       case 8: // Straight flush
         const w = CONFIG.pokerSymbols.indexOf(_bid[1])
@@ -506,19 +513,19 @@ class Game {
           && arr1.includes(counts.figures[CONFIG.pokerSymbols[w + 2]])
           && arr1.includes(counts.figures[CONFIG.pokerSymbols[w + 3]])
           && arr1.includes(counts.figures[CONFIG.pokerSymbols[w + 4]])
-        ) stat = true
+        ) verdict = true
         break;
       case 7: // Four of a kind
-        if (figuresFirst >= 4) stat = true
+        if (figuresFirst >= 4) verdict = true
         break;
       case 6: // Flush
-        if (colors >= 4) stat = true
+        if (colors >= 4) verdict = true
         break;
       case 5: // Full house
-        if (figuresFirst >= 3 && figuresSecond >= 2) stat = true
+        if (figuresFirst >= 3 && figuresSecond >= 2) verdict = true
         break;
       case 4: // Three of a kind
-        if (figuresFirst >= 3) stat = true
+        if (figuresFirst >= 3) verdict = true
         break;
       case 3: // Straight
         //f0
@@ -529,20 +536,20 @@ class Game {
           && counts.figures[CONFIG.pokerSymbols[y + 2]] >= 1
           && counts.figures[CONFIG.pokerSymbols[y + 3]] >= 1
           && counts.figures[CONFIG.pokerSymbols[y + 4]] >= 1
-        ) stat = true
+        ) verdict = true
         break;
       case 2: // Two pairs
-        if (figuresFirst >= 2 && figuresSecond >= 2) stat = true
+        if (figuresFirst >= 2 && figuresSecond >= 2) verdict = true
         break;
       case 1: // Pair;
-        if (figuresFirst >= 2) stat = true
+        if (figuresFirst >= 2) verdict = true
         break;
       case 0: // High card
-        if (figuresFirst >= 1) stat = true
+        if (figuresFirst >= 1) verdict = true
         break;
     }
     const cards = counts.figuresByColors
-    return { stat, cards }
+    return { verdict, cards }
     // const w0 = clients[room.clients[_room.last].id]
     // const w1 = clients[room.clients[_room.last+1].id]
 

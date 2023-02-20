@@ -6,3 +6,4 @@ build/
 
 # OSX
 .DS_Store
+__MACOSX

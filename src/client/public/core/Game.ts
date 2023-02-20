@@ -290,10 +290,10 @@ export class Game {
       alert.removeChild(alert.lastChild);
     const p = glob.document.createElement('p')
     // wygrane
-    if (res.stat === 1) p.innerText = `Wygrany: ${this.roomId}`
+    if (res.verdict === 1) p.innerText = `Wygrany: ${this.roomId}`
     // przegrany
-    else if (res.stat === 0) p.innerText = `Przegrany: ${this.roomId}`
-    else Logger.log(`wrong move message: stat`, 'error')
+    else if (res.verdict === 0) p.innerText = `Przegrany: ${this.roomId}`
+    else Logger.log(`wrong move message: verdict`, 'error')
     alert.append(p)
 
     // TODO: disply all cards

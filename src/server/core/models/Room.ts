@@ -20,6 +20,8 @@ class Room {
 
   private() {
     const _roomData = {
+      // 'score': cardsStart,
+      // 'cards': [],
       'cards': [],
       'player': {
         'last': null,

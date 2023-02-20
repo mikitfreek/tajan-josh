@@ -22,8 +22,8 @@
         "noImplicitAny": false,
         "noImplicitThis": false,
         "strictNullChecks": false,
-        // "removeComments": true,
-        "resolveJsonModule": true
+        "resolveJsonModule": true,
+        "removeComments": true
     },
     // "include": [
     //     // "init.ts",
