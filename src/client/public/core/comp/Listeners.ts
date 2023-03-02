@@ -1,23 +1,28 @@
+const glob = globalThis
+
 export class Listeners {
-    constructor() {
+    Renderer
+
+    constructor(Renderer) {
+        this.Renderer = Renderer
         this.init()
     }
 
     init() {
-        // const raise = document.getElementById('raise')
-        // raise.addEventListener("click", function () {
-        // openMd('raise');
-        // });
+        const raise = glob.document.getElementById('raise')
+        raise.addEventListener("click", () => {
+            this.Renderer.openMd('raise');
+        });
 
-        // const fire = document.getElementById('fire')
-        // fire.addEventListener("click", function () {
-        // openMd('fire');
-        // });
+        const fire = glob.document.getElementById('fire')
+        fire.addEventListener("click", () => {
+            this.Renderer.openMd('fire');
+        });
 
-        // const online = document.getElementById('online')
-        // online.addEventListener("click", function () {
-        // console.log('online: ');
-        // });
+        const online = glob.document.getElementById('online')
+        online.addEventListener("click", () => {
+            console.log('online: ');
+        });
     }
 }
 

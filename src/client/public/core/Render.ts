@@ -3,6 +3,8 @@ import { View } from './comp/View.js'
 import { Bid } from './comp/Bid.js'
 import * as params from './comp/params.js'
 
+const glob = globalThis
+
 export class Render {
   ws
   clientId
@@ -58,12 +60,12 @@ export class Render {
   animateSidebar(ui) {
     if (ui.classList.contains('hidden')) {
       ui.classList.remove('hidden');
-      setTimeout(function () {
+      setTimeout(() => {
         ui.classList.remove('visuallyhidden');
       }, 20);
     } else {
       ui.classList.add('visuallyhidden');
-      setTimeout(function () {
+      setTimeout(() => {
         ui.classList.add('hidden');
       }, 60);
       // ui.addEventListener('transitionend', function() {
@@ -147,7 +149,7 @@ export class Render {
 
     // let list0_, list1_, list2_//, s__
     // let s = -1
-    
+
   }
 
   toggleDarkMode() {
@@ -181,8 +183,8 @@ export class Render {
     list0.name = 'Ranks'
     list0.title = "ranks"
     list0.size = 10
-    const render = this;
-    list0.addEventListener('change', function () {
+
+    list0.addEventListener('change', () => {
       setBid(0, list0.options.selectedIndex)
 
       onButtonClick(list0.options.selectedIndex);
@@ -298,7 +300,7 @@ export class Render {
     const _btns2 = document.createElement('button');
     _btns2.classList.add('btn');
     _btns2.id = id
-    _btns2.addEventListener('click', e => {
+    _btns2.addEventListener('click', (e) => {
       ///////// Create room ////////////
       const alert = document.getElementById('alert')
       while (alert.children.length >= 1)
@@ -348,8 +350,8 @@ export class Render {
 
     const onButtonClick = (val) => {
       while (lists.children.length > 1)
-      lists.removeChild(lists.lastChild);
-  
+        lists.removeChild(lists.lastChild);
+
       const list1 = document.createElement('select');
       list1.id = 'cards'
       list1.name = 'Cards'
@@ -357,9 +359,9 @@ export class Render {
       list1.size = 10
       let _width = '4.1rem'
       if (val == 7 || val == 4) list1.style.minWidth = _width
-      list1.addEventListener('change', function () {
+      list1.addEventListener('change', () => {
         setBid(1, list0.options.selectedIndex, list1.options.selectedIndex)
-  
+
         // console.log(s)
         if (lists.childNodes.length > 2) {
           onButtonClick2(list1.options.selectedIndex);
@@ -367,7 +369,7 @@ export class Render {
           // s__='0' + (9 - Number(list0__)) + '0' + list1__
         }
       }, false);
-  
+
       let symbols = [
         params.cardsColors9,
         params.cardsColors9, //here cardsStraightSymbol9
@@ -386,35 +388,35 @@ export class Render {
         // p.value=String(symbols.length-i)
         list1.appendChild(p);
       });
-  
+
       lists.appendChild(list1);
-  
+
       const list2 = document.createElement('select');
       list2.id = 'cards2'
-      list2.addEventListener('change', function () {
+      list2.addEventListener('change', () => {
         if (lists.childNodes.length > 2) {
           setBid(2, list0.options.selectedIndex, list1.options.selectedIndex, list2.options.selectedIndex)
-  
+
           // list2_= list2.options.selectedIndex
           // s__='0' + Number(9 - list0__) + '0' + list1__ + '0' + list2__
         }
       }, false);
       if (val == 7 || val == 4) { // || val==1
-  
+
         list2.name = 'Cards'
         list2.title = "cards"
         list2.size = 10
         list2.style.minWidth = _width
-  
+
         //const _symbols= (val==7 || val==4) ? cards2Symbols9 : cardsColors9;
-  
+
         params.cards2Symbols9.forEach(function (e, i) {
           const p = document.createElement('option');
           p.appendChild(document.createTextNode(e));
           // p.value=String(cards2Symbols9.length-i)
           list2.appendChild(p);
         });
-  
+
         lists.appendChild(list2);
       }
       const onButtonClick2 = (val) => {
@@ -423,20 +425,5 @@ export class Render {
         list2.options[val].selected = false;
       }
     }
-
-    const raise = document.getElementById('raise')
-    raise.addEventListener("click", function () {
-      render.openMd('raise');
-    });
-
-    const fire = document.getElementById('fire')
-    fire.addEventListener("click", function () {
-      render.openMd('fire');
-    });
-
-    const online = document.getElementById('online')
-    online.addEventListener("click", function () {
-    console.log('online: ');
-    });
   }
 }

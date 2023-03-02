@@ -1,4 +1,5 @@
 import { Store } from './comp/Store.js'
+import { Listeners } from './comp/Listeners.js'
 import { Render } from './Render.js'
 
 const Storage = new Store("tajan-josh");
@@ -12,6 +13,7 @@ const Debugger = new Debug()
 
 export class Game {
   Renderer
+  Listeners
   clientId
   roomId
   ws
@@ -24,6 +26,7 @@ export class Game {
     this.ws.onmessage = async (event) => this.message(event.data)
 
     this.Renderer = new Render(this.ws, this.clientId, this.roomId)
+    this.Listeners = new Listeners(this.Renderer)
 
     glob.window.onload = () => {
 
