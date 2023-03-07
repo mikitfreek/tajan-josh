@@ -3,25 +3,26 @@ export class Debug {
   roomId
   ws
 
-  constructor(ws, clientId, roomId) {
-    this.ws = ws
-    this.clientId = clientId
-    this.roomId = roomId
-  }
+  constructor() { }
+
+  setWs = (ws) => this.ws = ws
+  setClientId = (clientId) => this.clientId = clientId
+  setRoomId = (roomId) => this.roomId = roomId
 
   interface() {
     const bidd = document.createElement('input')
-    bidd.id = 'bid-code'
+    bidd.id = 'dev_bidCode'
     bidd.placeholder = '00 02 00 ... 09 01 02 ..'
     document.body.append(bidd)
 
     const btnBid = document.createElement('button')
-    btnBid.id = 'bid'
-    btnBid.innerText = 'bid'
+    btnBid.id = 'dev_bid'
+    btnBid.innerText = 'raise'
     document.body.append(btnBid)
     btnBid.addEventListener('click', e => {
       const payLoad = {
         'method': 'move',
+        'type': 'raise',
         'roomId': this.roomId,
         'clientId': this.clientId,
         'bid': bidd.value
@@ -30,21 +31,21 @@ export class Debug {
     })
 
     const btnCheck = document.createElement('button')
-    btnCheck.id = 'check'
+    btnCheck.id = 'dev_check'
     btnCheck.innerText = 'check'
     document.body.append(btnCheck)
     btnCheck.addEventListener('click', e => {
       const payLoad = {
         'method': 'move',
+        'type': 'check',
         'roomId': this.roomId,
         'clientId': this.clientId,
-        'bid': 'check'
       }
       this.ws.send(JSON.stringify(payLoad))
     })
 
     const btnDraw = document.createElement('button')
-    btnDraw.id = 'draw'
+    btnDraw.id = 'dev_draw'
     btnDraw.innerText = 'draw'
     document.body.append(btnDraw)
     btnDraw.addEventListener('click', e => {
@@ -56,7 +57,7 @@ export class Debug {
     })
 
     const btnCreate = document.createElement('button')
-    btnCreate.id = 'create'
+    btnCreate.id = 'dev_create'
     btnCreate.innerText = 'create'
     document.body.append(btnCreate)
     btnCreate.addEventListener('click', e => {
@@ -69,12 +70,12 @@ export class Debug {
     })
 
     // const destRoomId = document.createElement('input')
-    // destRoomId.id = 'join-code'
+    // destRoomId.id = 'dev_joinCode'
     // destRoomId.placeholder = 'Enter room id..'
     // document.body.append(destRoomId)
 
     // const btnJoin = document.createElement('button')
-    // btnJoin.id = 'join'
+    // btnJoin.id = 'dev_join'
     // btnJoin.innerText = 'join'
     // document.body.append(btnJoin)
     // btnJoin.addEventListener('click', e => {

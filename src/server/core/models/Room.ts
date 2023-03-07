@@ -19,14 +19,18 @@ class Room {
   }
 
   private() {
-    const roomData = {
-      'last': 0,
+    const _roomData = {
+      // 'score': cardsStart,
+      // 'cards': [],
+      'cards': [],
+      'player': {
+        'last': null,
+        'next': 0,
+      },
       'bid': null,
-      'clients': [],
-      'cards': []
     }
 
-    return roomData
+    return _roomData
   }
 }
 module.exports = { Room }

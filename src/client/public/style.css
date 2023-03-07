@@ -1,10 +1,22 @@
-/* Styles go here. */
-
 /* html,
 body {
   margin: 0;
   padding: 0;
 } */
+html,
+body {
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  color: var(--color0);
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.004);
+  text-rendering: optimizeLegibility !important;
+  -webkit-font-smoothing: antialiased !important;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
 
 :root {
   --color0: #ca7632;
@@ -20,51 +32,50 @@ body {
   src: url('assets/BlackHanSans-Regular.ttf');
 }
 
-/* Styles go here. */
+/* Dev */
 
-
-/* Custom */
-
-#create,
-#join-code,
-#join,
-#bid-code,
-#bid,
-#draw,
-#check {
+/* #dev_joinCode, */
+/* #dev_join, */
+#dev_create,
+#dev_bidCode,
+#dev_bid,
+#dev_draw,
+#dev_check {
   position: fixed;
   color: white;
   background-color: #333;
   width: 250px;
 }
 
-#bid-code {
+#dev_bidCode {
   bottom: 140px;
 }
 
-#bid {
+#dev_bid {
   bottom: 120px;
 }
 
-#check {
+#dev_check {
   bottom: 100px;
 }
 
-#draw {
+#dev_draw {
   bottom: 80px;
 }
 
-#create {
+#dev_create {
   bottom: 60px;
 }
 
-#join-code {
+/* #dev_joinCode {
   bottom: 20px;
-}
+} */
 
-#join {
+/* #dev_join {
   bottom: 0;
-}
+} */
+
+/* Game */
 
 .createbtn {
   margin-top: .5rem;
@@ -94,6 +105,20 @@ body {
   border-radius: 9px;
   /* justify-content: center;
   align-items: center; */
+}
+
+@media screen and (max-width: 540px) {
+  .cards>div {
+    margin: 0 .3em;
+    height: 105px;
+  }
+}
+
+@media screen and (max-width: 380px) {
+  .cards>div {
+    margin: 0 .07em;
+    height: 97px;
+  }
 }
 
 .card .label {
@@ -155,26 +180,11 @@ font {
   -webkit-font-smoothing: antialiased !important;
 }
 
-html,
-body {
-  overflow: hidden;
-  margin: 0;
-  padding: 0;
-  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
-  color: var(--color0);
-  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.004);
-  text-rendering: optimizeLegibility !important;
-  -webkit-font-smoothing: antialiased !important;
-  -webkit-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
 canvas {
   touch-action: none;
 }
 
-section#ui {
+section#GameUI {
   position: absolute;
   width: 100%;
   height: 100%;
@@ -498,11 +508,11 @@ body.dark-mode {
   padding: 0;
 }
 
-#renderUi {
+#UI {
   position: fixed;
 }
 
-#renderUi * {
+#UI * {
   /* margin: 0; */
   /* padding: 0; */
   /* position:absolute;
@@ -763,7 +773,7 @@ body.dark-mode {
   background: none;
 }
 
-.home-section {
+.ui-section {
   position: relative;
   background: #0001;
   min-height: 100vh;
@@ -775,12 +785,12 @@ body.dark-mode {
   z-index: 2;
 }
 
-.sidebar.open~.home-section {
+.sidebar.open~.ui-section {
   left: 250px;
   width: calc(100% - 250px);
 }
 
-.home-section .text {
+.ui-section .text {
   display: inline-block;
   /* color: #11101d; */
   font-size: 25px;

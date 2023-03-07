@@ -1,14 +1,23 @@
 // import { Parser } from './Parser'
-import { Bid } from './Bid.js'
-import * as params from './params.js'
+import { View } from './comp/View.js'
+import { Bid } from './comp/Bid.js'
+import * as params from './comp/params.js'
+
+const glob = globalThis
 
 export class Render {
   ws
   clientId
   roomId
 
-  constructor(ws, clientId, roomId) {
+  constructor(ws) {
     this.ws = ws
+
+    const ViewNow = new View()
+    ViewNow.init()
+  }
+
+  setData(clientId, roomId) {
     this.clientId = clientId
     this.roomId = roomId
   }
@@ -23,7 +32,7 @@ export class Render {
       card.className = 'card'
       const label = document.createElement('div')
       label.className = 'label'
-      if (data[i][1] === 'h' || data[i][1] === 'd')
+      if (data[i][1] === 'h' || data[i][1] === 'k')
         label.className += ' red'
       for (let k = 0; k < 2; k++) {
         const span = document.createElement('span')
@@ -37,7 +46,7 @@ export class Render {
   }
 
   renderSidebar() {
-    const ui: any = document.getElementById('renderUi')
+    const ui: any = document.getElementById('UI')
     const menu = document.getElementById('menu')
 
     menu.onclick = () => {
@@ -54,12 +63,12 @@ export class Render {
   animateSidebar(ui) {
     if (ui.classList.contains('hidden')) {
       ui.classList.remove('hidden');
-      setTimeout(function () {
+      setTimeout(() => {
         ui.classList.remove('visuallyhidden');
       }, 20);
     } else {
       ui.classList.add('visuallyhidden');
-      setTimeout(function () {
+      setTimeout(() => {
         ui.classList.add('hidden');
       }, 60);
       // ui.addEventListener('transitionend', function() {
@@ -72,9 +81,9 @@ export class Render {
     }
   }
 
-  updateUI() {
+  updateUI(bid) {
     /////////////////
-    let bid = '090102'; // output from server ------> client  // ['K','K','Q','Q','Q']
+    // let bid = '090102'; // output from server ------> client  // ['K','K','Q','Q','Q']
     // let cards = 'AhApAtKkKp'; // - ,, -
     // /////////////////
 
@@ -143,7 +152,7 @@ export class Render {
 
     // let list0_, list1_, list2_//, s__
     // let s = -1
-    
+
   }
 
   toggleDarkMode() {
@@ -151,7 +160,7 @@ export class Render {
     e.classList.toggle("dark-mode");
   }
 
-  openMd(id) {
+  openMd = (clientId, roomId, id) => {
     const md = document.createElement('div');
 
     md.classList.add('md-modal')
@@ -177,8 +186,8 @@ export class Render {
     list0.name = 'Ranks'
     list0.title = "ranks"
     list0.size = 10
-    const render = this;
-    list0.addEventListener('change', function () {
+
+    list0.addEventListener('change', () => {
       setBid(0, list0.options.selectedIndex)
 
       onButtonClick(list0.options.selectedIndex);
@@ -230,7 +239,7 @@ export class Render {
 
         content.appendChild(lists);
         break;
-      case 'fire':
+      case 'check':
         title.innerHTML = 'Check last player!';
 
         const mess = document.createElement('div');
@@ -271,51 +280,39 @@ export class Render {
     //       list1__=list1.options.selectedIndex, 
     //       list2__=list2.options.selectedIndex
     //let    s=String('0' + Number(9 - list0_) + '0' + list1_ + '0' + list2_), // = list0.options.selectedIndex
-    let s_;
+    let bid;
+    const bid_no = 9 // number of bids
+    const no = 9 // cards figures number
     const setBid = (col, val0, val1 = 0, val2 = 0) => {
       switch (col) {
         case 0:
-          s_ = `0${9 - val0}`
+          bid = `0${bid_no - val0}`
           break;
         case 1:
-          s_ = `0${9 - val0}0${val1}`
+          bid = `0${bid_no - val0}0${no - val1}`
           break;
         case 2:
-          s_ = `0${9 - val0}0${val1}0${val2}`
+          bid = `0${bid_no - val0}0${no - val1}0${no - val2}`
           break;
       }
     }
-    let bid__ = (id === 'raise') ? s_ : 'check';
+    // let bid = (id === 'raise') ? s_ : 'check';
+    // const bid = s_
 
     const ranks_ = document.getElementById('ranks')
     const cards_ = document.getElementById('cards')
     const cards2_ = document.getElementById('cards2')
 
-    const _btns2 = document.createElement('button');
+    const btns = document.getElementById('action');
+    btns.style.visibility = 'hidden';
+    const closeMd = () => {
+      // document.body.removeChild(document.body.lastChild);
+      md.remove()
+      btns.style.visibility = 'visible';
+    }
+
+    let _btns2 = document.createElement('button');
     _btns2.classList.add('btn');
-    _btns2.id = id
-    _btns2.addEventListener('click', e => {
-      ///////// Create room ////////////
-      const alert = document.getElementById('alert')
-      while (alert.children.length >= 1)
-        alert.removeChild(alert.lastChild);
-      const d = document.createElement('div')
-      // d.className='createbtn'
-      d.innerText = 'Send bid..'
-      console.log(bid__)
-      d.addEventListener('click', e => {
-        const payLoad = {
-          'method': 'move',
-          'roomId': this.roomId,
-          'clientId': this.clientId,
-          'bid': bid__
-        }
-        // console.log('data')
-        this.ws.send(JSON.stringify(payLoad))
-      })
-      alert.append(d)
-      //////////////////////////////////
-    })
     _btns2.innerHTML = 'Accept';
 
     _btns.appendChild(_btns1);
@@ -326,10 +323,41 @@ export class Render {
     // add canvas to dom
     document.body.appendChild(md);
 
-    const btns = document.getElementById('action');
-    btns.style.visibility = 'hidden';
+    // _btns2.id = (id === 'raise') ? 'raise-accept' : 'fire-accept'
+    _btns2.addEventListener('click', (e) => {
+      const alert = document.getElementById('alert')
+      while (alert.children.length >= 1)
+        alert.removeChild(alert.lastChild);
+      const d = document.createElement('div')
+      // d.className='createbtn'
+      d.innerText = 'Sending bid..'
+      // console.log(bid)
+      // raise
+      switch (id) {
+        case 'raise':
+          const payLoad1 = {
+            'method': 'move',
+            'type': 'raise',
+            'roomId': roomId,
+            'clientId': clientId,
+            'bid': bid
+          }
+          this.ws.send(JSON.stringify(payLoad1))
+          break;
+        case 'check':
+          const payLoad2 = {
+            'method': 'move',
+            'type': 'check',
+            'roomId': roomId,
+            'clientId': clientId,
+          }
+          this.ws.send(JSON.stringify(payLoad2))
+          break;
+        }
+      alert.append(d);
 
-    //const up = document.querySelector('.up');
+      closeMd()
+    });
 
     const esc = [
       exit,
@@ -337,15 +365,14 @@ export class Render {
     ]
     esc.forEach((e) => {
       e.addEventListener('click', () => {
-        document.body.removeChild(document.body.lastChild);
-        btns.style.visibility = 'visible';
+        closeMd()
       });
     });
 
     const onButtonClick = (val) => {
       while (lists.children.length > 1)
-      lists.removeChild(lists.lastChild);
-  
+        lists.removeChild(lists.lastChild);
+
       const list1 = document.createElement('select');
       list1.id = 'cards'
       list1.name = 'Cards'
@@ -353,9 +380,9 @@ export class Render {
       list1.size = 10
       let _width = '4.1rem'
       if (val == 7 || val == 4) list1.style.minWidth = _width
-      list1.addEventListener('change', function () {
+      list1.addEventListener('change', () => {
         setBid(1, list0.options.selectedIndex, list1.options.selectedIndex)
-  
+
         // console.log(s)
         if (lists.childNodes.length > 2) {
           onButtonClick2(list1.options.selectedIndex);
@@ -363,7 +390,7 @@ export class Render {
           // s__='0' + (9 - Number(list0__)) + '0' + list1__
         }
       }, false);
-  
+
       let symbols = [
         params.cardsColors9,
         params.cardsColors9, //here cardsStraightSymbol9
@@ -382,35 +409,35 @@ export class Render {
         // p.value=String(symbols.length-i)
         list1.appendChild(p);
       });
-  
+
       lists.appendChild(list1);
-  
+
       const list2 = document.createElement('select');
       list2.id = 'cards2'
-      list2.addEventListener('change', function () {
+      list2.addEventListener('change', () => {
         if (lists.childNodes.length > 2) {
           setBid(2, list0.options.selectedIndex, list1.options.selectedIndex, list2.options.selectedIndex)
-  
+
           // list2_= list2.options.selectedIndex
           // s__='0' + Number(9 - list0__) + '0' + list1__ + '0' + list2__
         }
       }, false);
       if (val == 7 || val == 4) { // || val==1
-  
+
         list2.name = 'Cards'
         list2.title = "cards"
         list2.size = 10
         list2.style.minWidth = _width
-  
+
         //const _symbols= (val==7 || val==4) ? cards2Symbols9 : cardsColors9;
-  
+
         params.cards2Symbols9.forEach(function (e, i) {
           const p = document.createElement('option');
           p.appendChild(document.createTextNode(e));
           // p.value=String(cards2Symbols9.length-i)
           list2.appendChild(p);
         });
-  
+
         lists.appendChild(list2);
       }
       const onButtonClick2 = (val) => {
@@ -419,20 +446,5 @@ export class Render {
         list2.options[val].selected = false;
       }
     }
-
-    const raise = document.getElementById('raise')
-    raise.addEventListener("click", function () {
-      render.openMd('raise');
-    });
-
-    const fire = document.getElementById('fire')
-    fire.addEventListener("click", function () {
-      render.openMd('fire');
-    });
-
-    const online = document.getElementById('online')
-    online.addEventListener("click", function () {
-    console.log('online: ');
-    });
   }
 }
