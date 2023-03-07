@@ -1,5 +1,5 @@
 import { Store } from './comp/Store.js'
-import { Listeners } from './comp/Listeners.js'
+// import { Listeners } from './comp/Listeners.js' // too complicated
 import { Render } from './Render.js'
 
 const Storage = new Store("tajan-josh");
@@ -19,14 +19,21 @@ export class Game {
   ws
   hashHandlerFlag = true
   joining = false
+  actionButtons: HTMLElement;
 
   constructor() {
     this.initWebSocket()
     
     this.ws.onmessage = async (event) => this.message(event.data)
 
-    this.Renderer = new Render(this.ws, this.clientId, this.roomId)
-    this.Listeners = new Listeners(this.Renderer)
+    this.Renderer = new Render(this.ws)
+
+    // this.Listeners = new Listeners(this.Renderer) // unable to pass Renderer
+    this.listeners()
+    
+    // hide action buttons
+    this.actionButtons = glob.document.getElementById('action')
+    this.actionButtons.style.visibility = 'hidden'
 
     glob.window.onload = () => {
 
@@ -153,17 +160,17 @@ export class Game {
     const alert = glob.document.getElementById('alert')
     this.roomId = res.room.id
     const clientId = res.room.hostId
+
+    // TODO: disable hash handler for a room host hash change
+    // https://stackoverflow.com/questions/13233914/prevent-window-onhashchange-from-executing-when-hash-is-set-via-javascript
+    this.hashHandlerFlag = false
+    glob.location.replace('#' + this.roomId)
+
     Logger.log(`Room created successfully by client: ${clientId}, with id: ${this.roomId}`, 'success')
     // console.log(glob.location.origin + '/r/' + roomId)
     glob.navigator.clipboard.writeText(glob.location.origin + '/#' + this.roomId).then(res => {
       console.log(`${glob.location.origin + '/#' + this.roomId} - copied to clipboard`);
     })
-
-    // TODO: disable hash handler for a room host hash change
-    // https://stackoverflow.com/questions/13233914/prevent-window-onhashchange-from-executing-when-hash-is-set-via-javascript
-    // this.hashHandlerFlag = false
-    // glob.location.replace('#' + this.roomId)
-    // this.hashHandlerFlag = true
 
     // const alert = glob.document.getElementById('alert')
     while (alert.children.length >= 1)
@@ -202,17 +209,21 @@ export class Game {
   joined(res) {
     const alert = glob.document.getElementById('alert')
     this.roomId = res.room.id
-    if (this.clientId === 'undefined') this.clientId = res.clientId
+    // if (this.clientId === 'undefined') this.clientId = res.clientId
+    this.clientId = res.clientId
+
+    this.Renderer.setData(this.clientId, this.roomId)
+
     Logger.log(`Room: ${this.roomId} joined successfully by client: ${this.clientId}`, 'success')
     // const alert = glob.document.getElementById('alert')
 
-    if (this.clientId === res.clientId) {
-      while (alert.children.length >= 1)
-        alert.removeChild(alert.lastChild);
-      const p = glob.document.createElement('p')
-      p.innerText = `${res.clientId} joined a room: ${this.roomId}`
-      alert.append(p)
-    }
+    // if (this.clientId === res.clientId) {
+    while (alert.children.length >= 1)
+      alert.removeChild(alert.lastChild);
+    const p = glob.document.createElement('p')
+    p.innerText = `${res.clientId} joined a room: ${this.roomId}`
+    alert.append(p)
+    // }
     // const z = glob.document.querySelector('#online span')
     // z.appendChild(res.room.clients.length)
 
@@ -233,6 +244,8 @@ export class Game {
   }
 
   turn() {
+    // show action buttons
+    this.actionButtons.style.visibility = ''
     const alert = glob.document.getElementById('alert')
     Logger.log(`Now is your turn, client: ${this.clientId} from room id: ${this.roomId}`, 'info')
     // const alert0 = glob.document.getElementById('alert')
@@ -245,6 +258,8 @@ export class Game {
   }
 
   now(res) {
+    // hide action buttons
+    this.actionButtons.style.visibility = 'hidden'
     const alert = glob.document.getElementById('alert')
     Logger.log(`Now is client: ${res.name} turn, from room id: ${this.roomId}`, 'info')
     // const alert0 = glob.document.getElementById('alert')
@@ -310,4 +325,21 @@ export class Game {
     p.innerText = `Raise: ${this.roomId}`
     alert.append(p)
   }
+
+  listeners() {
+    const raise = glob.document.getElementById('raise')
+    raise.addEventListener("click", () => {
+        this.Renderer.openMd(this.clientId, this.roomId, 'raise');
+    });
+
+    const check = glob.document.getElementById('check')
+    check.addEventListener("click", () => {
+        this.Renderer.openMd(this.clientId, this.roomId, 'check');
+    });
+
+    const online = glob.document.getElementById('online')
+    online.addEventListener("click", () => {
+        console.log('online: ');
+    });
+}
 }

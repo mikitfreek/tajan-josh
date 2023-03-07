@@ -52,7 +52,7 @@ export class View {
   </div>
   <div class="dn">
     <div id="action" class="btns-action">
-      <div id="fire" class="btn">
+      <div id="check" class="btn">
         <div>Check</div>
       </div>
       <div id="raise" class="btn">

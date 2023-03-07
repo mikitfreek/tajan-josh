@@ -9,20 +9,20 @@ export class Listeners {
     }
 
     init() {
-        const raise = glob.document.getElementById('raise')
-        raise.addEventListener("click", () => {
-            this.Renderer.openMd('raise');
-        });
+        // const raise = glob.document.getElementById('raise')
+        // raise.addEventListener("click", () => {
+        //     this.Renderer.openMd('raise');
+        // });
 
-        const fire = glob.document.getElementById('fire')
-        fire.addEventListener("click", () => {
-            this.Renderer.openMd('fire');
-        });
+        // const fire = glob.document.getElementById('fire')
+        // fire.addEventListener("click", () => {
+        //     this.Renderer.openMd('fire');
+        // });
 
-        const online = glob.document.getElementById('online')
-        online.addEventListener("click", () => {
-            console.log('online: ');
-        });
+        // const online = glob.document.getElementById('online')
+        // online.addEventListener("click", () => {
+        //     console.log('online: ');
+        // });
     }
 }
 

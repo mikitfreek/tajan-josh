@@ -10,13 +10,16 @@ export class Render {
   clientId
   roomId
 
-  constructor(ws, clientId, roomId) {
+  constructor(ws) {
     this.ws = ws
-    this.clientId = clientId
-    this.roomId = roomId
 
     const ViewNow = new View()
     ViewNow.init()
+  }
+
+  setData(clientId, roomId) {
+    this.clientId = clientId
+    this.roomId = roomId
   }
 
   static createCards(data) {
@@ -157,7 +160,7 @@ export class Render {
     e.classList.toggle("dark-mode");
   }
 
-  openMd(id) {
+  openMd = (clientId, roomId, id) => {
     const md = document.createElement('div');
 
     md.classList.add('md-modal')
@@ -236,7 +239,7 @@ export class Render {
 
         content.appendChild(lists);
         break;
-      case 'fire':
+      case 'check':
         title.innerHTML = 'Check last player!';
 
         const mess = document.createElement('div');
@@ -277,51 +280,39 @@ export class Render {
     //       list1__=list1.options.selectedIndex, 
     //       list2__=list2.options.selectedIndex
     //let    s=String('0' + Number(9 - list0_) + '0' + list1_ + '0' + list2_), // = list0.options.selectedIndex
-    let s_;
+    let bid;
+    const bid_no = 9 // number of bids
+    const no = 9 // cards figures number
     const setBid = (col, val0, val1 = 0, val2 = 0) => {
       switch (col) {
         case 0:
-          s_ = `0${9 - val0}`
+          bid = `0${bid_no - val0}`
           break;
         case 1:
-          s_ = `0${9 - val0}0${val1}`
+          bid = `0${bid_no - val0}0${no - val1}`
           break;
         case 2:
-          s_ = `0${9 - val0}0${val1}0${val2}`
+          bid = `0${bid_no - val0}0${no - val1}0${no - val2}`
           break;
       }
     }
-    let bid__ = (id === 'raise') ? s_ : 'check';
+    // let bid = (id === 'raise') ? s_ : 'check';
+    // const bid = s_
 
     const ranks_ = document.getElementById('ranks')
     const cards_ = document.getElementById('cards')
     const cards2_ = document.getElementById('cards2')
 
-    const _btns2 = document.createElement('button');
+    const btns = document.getElementById('action');
+    btns.style.visibility = 'hidden';
+    const closeMd = () => {
+      // document.body.removeChild(document.body.lastChild);
+      md.remove()
+      btns.style.visibility = 'visible';
+    }
+
+    let _btns2 = document.createElement('button');
     _btns2.classList.add('btn');
-    _btns2.id = id
-    _btns2.addEventListener('click', (e) => {
-      ///////// Create room ////////////
-      const alert = document.getElementById('alert')
-      while (alert.children.length >= 1)
-        alert.removeChild(alert.lastChild);
-      const d = document.createElement('div')
-      // d.className='createbtn'
-      d.innerText = 'Send bid..'
-      console.log(bid__)
-      d.addEventListener('click', e => {
-        const payLoad = {
-          'method': 'move',
-          'roomId': this.roomId,
-          'clientId': this.clientId,
-          'bid': bid__
-        }
-        // console.log('data')
-        this.ws.send(JSON.stringify(payLoad))
-      })
-      alert.append(d)
-      //////////////////////////////////
-    })
     _btns2.innerHTML = 'Accept';
 
     _btns.appendChild(_btns1);
@@ -332,10 +323,41 @@ export class Render {
     // add canvas to dom
     document.body.appendChild(md);
 
-    const btns = document.getElementById('action');
-    btns.style.visibility = 'hidden';
+    // _btns2.id = (id === 'raise') ? 'raise-accept' : 'fire-accept'
+    _btns2.addEventListener('click', (e) => {
+      const alert = document.getElementById('alert')
+      while (alert.children.length >= 1)
+        alert.removeChild(alert.lastChild);
+      const d = document.createElement('div')
+      // d.className='createbtn'
+      d.innerText = 'Sending bid..'
+      // console.log(bid)
+      // raise
+      switch (id) {
+        case 'raise':
+          const payLoad1 = {
+            'method': 'move',
+            'type': 'raise',
+            'roomId': roomId,
+            'clientId': clientId,
+            'bid': bid
+          }
+          this.ws.send(JSON.stringify(payLoad1))
+          break;
+        case 'check':
+          const payLoad2 = {
+            'method': 'move',
+            'type': 'check',
+            'roomId': roomId,
+            'clientId': clientId,
+          }
+          this.ws.send(JSON.stringify(payLoad2))
+          break;
+        }
+      alert.append(d);
 
-    //const up = document.querySelector('.up');
+      closeMd()
+    });
 
     const esc = [
       exit,
@@ -343,8 +365,7 @@ export class Render {
     ]
     esc.forEach((e) => {
       e.addEventListener('click', () => {
-        document.body.removeChild(document.body.lastChild);
-        btns.style.visibility = 'visible';
+        closeMd()
       });
     });
 

@@ -66,6 +66,8 @@ class Game {
         try {
           // clients[clientId].active = false
           const clientId = this.clientsIds[connectionId]
+          // TODO: only set player as inactive
+          // delete inactive clients data after a room is closed
           this.deleteClientData(connectionId, clientId) // TODO: important
           Logger.log('Connection closed: ' + clientId, 'warning')
           // clearInterval(id)
@@ -121,6 +123,8 @@ class Game {
 
   message(msg, ws, connectionId) {
     const req = JSON.parse(msg) //.utf8Data
+    Logger.print(req)
+
     if (req.method === 'load')
       this.load(req, ws, connectionId)
     else if (req.method === 'create')
@@ -133,9 +137,6 @@ class Game {
       this.firstDraw(req)
     else if (req.method === 'move')
       this.move(req)
-
-
-    Logger.print(req)
   }
 
   //----------
@@ -259,6 +260,11 @@ class Game {
     const room = this.rooms[roomId]
     const _room = this._rooms[roomId]
     const type = req.type
+
+    // Logger.log('data')
+    // Logger.print(req)
+    // Logger.print(roomId)
+    // Logger.print(this._rooms[roomId])
 
     // action: raise
     if (type === 'raise') this.raise(roomId, room, _room, req.bid)
