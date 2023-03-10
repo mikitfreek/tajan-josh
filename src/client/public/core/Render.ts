@@ -27,16 +27,25 @@ export class Render {
     const cards = document.createElement('div')
     cards.className = 'cards'
 
+    const emoji = (e) => String.fromCodePoint(e)
+    const suits = (e) => {
+      if      (e === 's') e = emoji(0x2660)
+      else if (e === 'h') e = emoji(0x2665)
+      else if (e === 'd') e = emoji(0x2666)
+      else if (e === 'c') e = emoji(0x2663)
+      return e
+    };
+
     for (let i = 0; i < data.length; i++) {
       const card = document.createElement('div')
       card.className = 'card'
       const label = document.createElement('div')
       label.className = 'label'
-      if (data[i][1] === 'h' || data[i][1] === 'k')
+      if (data[i][1] === 'h' || data[i][1] === 'd')
         label.className += ' red'
       for (let k = 0; k < 2; k++) {
         const span = document.createElement('span')
-        span.innerHTML = data[i][k]
+        span.innerHTML = k === 1 ? suits(data[i][1]) : data[i][k]
         label.appendChild(span)
       }
       card.appendChild(label)
@@ -188,7 +197,7 @@ export class Render {
     list0.size = 10
 
     list0.addEventListener('change', () => {
-      setBid(0, list0.options.selectedIndex)
+      bid = setBid(list0.options.selectedIndex)
 
       onButtonClick(list0.options.selectedIndex);
       // list0_= list0.options.selectedIndex
@@ -280,21 +289,30 @@ export class Render {
     //       list1__=list1.options.selectedIndex, 
     //       list2__=list2.options.selectedIndex
     //let    s=String('0' + Number(9 - list0_) + '0' + list1_ + '0' + list2_), // = list0.options.selectedIndex
+    // const ranks9 = [
+    //   'Royal flush',      // 09 02 01 // 9k   // 3rd color
+    //   'Straight flush',   // 08 09 01 // 89k  // 3rd color
+    //   'Four of a kind',   // 07 02 00 // 79
+    //   'Flush',            // 06 00 01 // 6k   // 3rd color
+    //   'Full house',       // 05 02 03 // 59T
+    //   'Three of a kind',  // 04 02 00 // 49
+    //   'Straight',         // 03 09 00 // 39
+    //   'Two pairs',        // 02 03 02 // 29T  03 03 02 02 // sort max to begin
+    //   'Pair',             // 01 02 00 // 19   02 02 
+    //   'High card',        // 00 02 00 // 09   02
     let bid;
-    const bid_no = 9 // number of bids
-    const no = 9 // cards figures number
-    const setBid = (col, val0, val1 = 0, val2 = 0) => {
-      switch (col) {
-        case 0:
-          bid = `0${bid_no - val0}`
-          break;
-        case 1:
-          bid = `0${bid_no - val0}0${no - val1}`
-          break;
-        case 2:
-          bid = `0${bid_no - val0}0${no - val1}0${no - val2}`
-          break;
-      }
+    const setBid = (paramBid, param1 = -1, param2 = -1) => {
+      let b = 9 - paramBid // 9 - number of bids
+      let n = 13 + 1 // 13 figures in max scenario; + 1 because code 02 is figure 2
+      let n1 = n, n2 = n
+      if (b === 3 || b === 8) n1 = 9 + 1 // 9 straight bids; +1 as above
+      if (b === 6 || b === 8 || b === 9) n2 = 4 // color bids
+      let one = param1 === -1 ? '00' : String(n1 - param1)
+      let two = param2 === -1 ? '00' : String(n2 - param2)
+      one = one.length === 1 ? `0${one}` : one
+      two = two.length === 1 ? `0${two}` : two
+
+      return `0${b}${one}${two}`
     }
     // let bid = (id === 'raise') ? s_ : 'check';
     // const bid = s_
@@ -324,39 +342,44 @@ export class Render {
     document.body.appendChild(md);
 
     // _btns2.id = (id === 'raise') ? 'raise-accept' : 'fire-accept'
+    let allow = false
     _btns2.addEventListener('click', (e) => {
       const alert = document.getElementById('alert')
       while (alert.children.length >= 1)
         alert.removeChild(alert.lastChild);
       const d = document.createElement('div')
-      // d.className='createbtn'
-      d.innerText = 'Sending bid..'
-      // console.log(bid)
-      // raise
-      switch (id) {
-        case 'raise':
-          const payLoad1 = {
-            'method': 'move',
-            'type': 'raise',
-            'roomId': roomId,
-            'clientId': clientId,
-            'bid': bid
+      if (allow || id === 'check') {
+        // d.className='createbtn'
+        d.innerText = 'Bid is too small' // sending bid to server
+        // console.log(bid)
+        // raise
+        switch (id) {
+          case 'raise':
+            const payLoad1 = {
+              'method': 'move',
+              'type': 'raise',
+              'roomId': roomId,
+              'clientId': clientId,
+              'bid': bid
+            }
+            this.ws.send(JSON.stringify(payLoad1))
+            break;
+          case 'check':
+            const payLoad2 = {
+              'method': 'move',
+              'type': 'check',
+              'roomId': roomId,
+              'clientId': clientId,
+            }
+            this.ws.send(JSON.stringify(payLoad2))
+            break;
           }
-          this.ws.send(JSON.stringify(payLoad1))
-          break;
-        case 'check':
-          const payLoad2 = {
-            'method': 'move',
-            'type': 'check',
-            'roomId': roomId,
-            'clientId': clientId,
-          }
-          this.ws.send(JSON.stringify(payLoad2))
-          break;
-        }
-      alert.append(d);
+        // alert.append(d);
 
-      closeMd()
+        closeMd()
+      }
+      else d.innerText = 'Check all options'
+      alert.append(d);
     });
 
     const esc = [
@@ -381,7 +404,11 @@ export class Render {
       let _width = '4.1rem'
       if (val == 7 || val == 4) list1.style.minWidth = _width
       list1.addEventListener('change', () => {
-        setBid(1, list0.options.selectedIndex, list1.options.selectedIndex)
+        if (val == 0 || val == 3)
+          bid = setBid(list0.options.selectedIndex, -1, list1.options.selectedIndex)
+        else if (val == 1)
+          bid = setBid(list0.options.selectedIndex, 0, list1.options.selectedIndex)
+        else bid = setBid(list0.options.selectedIndex, list1.options.selectedIndex)
 
         // console.log(s)
         if (lists.childNodes.length > 2) {
@@ -389,6 +416,7 @@ export class Render {
           // list1_= list1.options.selectedIndex
           // s__='0' + (9 - Number(list0__)) + '0' + list1__
         }
+        else allow = true
       }, false);
 
       let symbols = [
@@ -416,7 +444,8 @@ export class Render {
       list2.id = 'cards2'
       list2.addEventListener('change', () => {
         if (lists.childNodes.length > 2) {
-          setBid(2, list0.options.selectedIndex, list1.options.selectedIndex, list2.options.selectedIndex)
+          onButtonClick1(list2.options.selectedIndex)
+          bid = setBid(list0.options.selectedIndex, list1.options.selectedIndex, list2.options.selectedIndex)
 
           // list2_= list2.options.selectedIndex
           // s__='0' + Number(9 - list0__) + '0' + list1__ + '0' + list2__
@@ -440,10 +469,24 @@ export class Render {
 
         lists.appendChild(list2);
       }
+      let val1 = 0, val2 = 0
+      const checkSelected = () => {
+        if (list1.options[val1].selected === true 
+          && list2.options[val2].selected === true) allow = true
+      }
       const onButtonClick2 = (val) => {
         Array.from(list2.options).forEach(function (e) { e.disabled = false });
+        val1 = val
+        checkSelected()
         list2.options[val].disabled = true;
         list2.options[val].selected = false;
+      }
+      const onButtonClick1 = (val) => {
+        Array.from(list1.options).forEach(function (e) { e.disabled = false });
+        val2 = val
+        checkSelected()
+        list1.options[val].disabled = true;
+        list1.options[val].selected = false;
       }
     }
   }
