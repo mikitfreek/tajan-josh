@@ -1,11 +1,16 @@
+const CONFIG = require('../../game.config.json')
+
 class Deck {
   deck: any
 
-  constructor() {
+  constructor(additional_cards = 0) {
     this.deck = [];
 
-    const suits = ['k', 'h', 't', 'p'];
-    const values = ['9', 'T', 'J', 'Q', 'K', 'A'];
+    //The order of the suits from strongest to weakest is Spades, Hearts, Diamonds, and Clubs
+    const suits = CONFIG.suits;
+    // const values = ['9', 'T', 'J', 'Q', 'K', 'A'];
+    additional_cards = additional_cards > 7 ? 7 : additional_cards;
+    const values = CONFIG.ranks.slice(7 - additional_cards, 13);
 
     for (let suit in suits) {
       for (let value in values) {

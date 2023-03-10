@@ -148,21 +148,24 @@ class Game {
     const clientId = req.id?.length === 36 ? req.id : connectionId
 
     this.clientsIds[connectionId] = clientId
-    let _clientName, clientUndefined = false;
+    let clientName, clientUndefined = false;
     // check if another client has same name   // ws.id = req.headers['sec-websocket-key'];
     if (typeof this.clients[clientId] === "undefined") {
       clientUndefined = true
       const clientIp = ws._socket?.remoteAddress //req.socket.remoteAddress;
       const elapsed = Date.now();
       const now = new Date(elapsed);
-      const clientName = `client_${now.getDate()}_${now.getMonth() + 1}_${now.getHours()}${now.getMinutes()}_${now.getSeconds()}_${now.getMilliseconds()}`//req.url.replace('/?uuid=', '') // ${Object.keys(this.clients).length}
-      _clientName= clientName
+
+      // DEBUG
+      clientName = `client_${now.getDate()}_${now.getMonth() + 1}_${now.getHours()}${now.getMinutes()}_${now.getSeconds()}_${now.getMilliseconds()}`//req.url.replace('/?uuid=', '') // ${Object.keys(this.clients).length}
+      //
+      // clientName = req.name
 
       const clientData = new Client(clientName, clientId, ws, clientIp, CONFIG.cardsStart)
       this.clients[clientId] = clientData
     }
 
-    Logger.log('* >======== ' + _clientName + ' ========>', _clientName !== undefined ? 'info' : 'error')
+    Logger.log('* >======== ' + clientName + ' ========>', clientName !== undefined ? 'info' : 'error')
     if (clientId !== connectionId && clientUndefined)
       Logger.log('Client got back after a while: ' + clientId, 'info')
     else if (clientId !== connectionId && !clientUndefined)
@@ -293,7 +296,8 @@ class Game {
   }
 
   draw(room) {
-    const newDeck = new Deck();
+    const additional_cards = 0;
+    const newDeck = new Deck(additional_cards);
     newDeck.shuffle()
 
     room.clients.forEach(c => {
@@ -323,13 +327,16 @@ class Game {
     })
   }
 
+  // not working bid check:
+  // pair
+  // two pairs
   raise(roomId, room, _room, bid) {
-    if (_room.bid === null) this._rooms[roomId].bid = 0
+    if (_room.bid === null) _room.bid = 0
     // raise = Number(); ranks[raise]
 
     // check if bid>room.lastbid
     if (bid > _room.bid) {
-      this._rooms[roomId].bid = bid
+      _room.bid = bid
       // moved to getNextPlayer
       // ++this._rooms[roomId].last
       // if (_room.last >= room.clients.length) this._rooms[roomId].last = 0
@@ -351,7 +358,7 @@ class Game {
       // this.draw(room)
       this.play(roomId)
     } // else report error
-    else Logger.log('smaller bid detected', 'error')
+    else Logger.log(`Smaller bid detected: ${bid} : ${this._rooms[roomId].bid}`, 'error')
   }
 
   getNextPlayer(roomId, room) {
@@ -372,10 +379,14 @@ class Game {
     const room = this.rooms[roomId]
     const _room = this._rooms[roomId]
     const payLoad = {
-      'method': 'turn'
+      'method': 'play',
+      'type': 'turn',
+      'check': _room.player.check
     }
+    if (_room.player.check === false) _room.player.check = true
     const payLoadNow = {
-      'method': 'now',
+      'method': 'play',
+      'type': 'now',
       'name': room.clients[this._rooms[roomId].player.next].name
     }
     // this.clients[_room.last - 1].connection.send(JSON.stringify(payLoad))
@@ -389,7 +400,7 @@ class Game {
         this.clients[c.id].connection.send(JSON.stringify(payLoadNow))
         Logger.log(`send: ${c.id} [${i}] ${this.rooms[roomId].clients[i].active === false ? 'inactive' : ''}`)
       }
-      else Logger.log(`while sending turn message`, 'error')
+      else Logger.log(`while sending play message`, 'error')
     })
     // room.clients.forEach((c, i) => {
     //   if (i === _room.last) this.clients[c.id].connection.send(JSON.stringify(payLoad))
@@ -405,8 +416,9 @@ class Game {
     // let winner = (verdict) ? 1 : 0;
 
     // ++card counter
-    if (verdict) ++this.clients[victim.id].score
-    else ++this.clients[checker.id].score
+    if (!verdict) ++this.clients[victim.id].score
+    else if (verdict) ++this.clients[checker.id].score
+    else Logger.log(`verdict: ${verdict} with bid: ${_room.bid}`, 'error')
 
     room.clients.forEach(c => {
       const payLoad = {
@@ -424,41 +436,48 @@ class Game {
     
     this.getNextPlayer(roomId, room)
     this.draw(room)
+    _room.player.check = false
     this.play(roomId)
+    // reset minimum bid for next round
+    _room.bid = null
   }
 
   checkBid(room, _room) {
-    const bid = _room.bid
+    let bid = _room.bid
 
     // final verdict
-    let verdict = false;
+    let verdict = null;
     
     // sum cards on hands
-    let _cards = []
+    let allCards = []
     room.clients?.forEach(c => {
       this.clients[c.id].cards.forEach(card => {
-        _cards.push(card)
+        allCards.push(card)
       })
     })
-    Logger.log(_cards)
+    Logger.log(allCards)
 
     // check if cards contain bid
     // sort tables
-    let counts = {
+    const counts = {
       figures: {},
       colors: {},
-      figuresByColors: {
-        'k': [],
-        'h': [],
-        't': [],
-        'p': []
-      }
+      // figuresByColors: {
+      //   'k': [],
+      //   'h': [],
+      //   't': [],
+      //   'p': []
+      // }
+      figuresByColors: {}
     };
+    for (const key of CONFIG.suits) {
+      counts.figuresByColors[key] = []
+    }
     // for(col in pokerColors)
     //   counts.figuresByColors[col] = []
 
     // sort cards to check
-    _cards.forEach(card => {
+    allCards.forEach(card => {
       const c = counts.figures[card[0]]
       counts.figures[card[0]] = c ? c + 1 : 1;
       const d = counts.colors[card[1]]
@@ -489,71 +508,87 @@ class Game {
     //   'Pair',             // 01 02 00 // 19   02 02 
     //   'High card',        // 00 02 00 // 09   02
     // ]
+    ///// NEW
+    // const ranks9 = [
+    //   'Royal flush',      // 09 02 01 // 9k   // 3rd color
+    //   'Straight flush',   // 08 09 01 // 89k  // 3rd color
+    //   'Four of a kind',   // 07 02 00 // 79
+    //   'Flush',            // 06 00 01 // 6k   // 3rd color
+    //   'Full house',       // 05 02 03 // 59T
+    //   'Three of a kind',  // 04 02 00 // 49
+    //   'Straight',         // 03 09 00 // 39
+    //   'Two pairs',        // 02 03 02 // 29T  03 03 02 02 // sort max to begin
+    //   'Pair',             // 01 02 00 // 19   02 02 
+    //   'High card',        // 00 02 00 // 09   02
+  
     //_bid='5QT'//'0Q'
     // bid.match(/.{1,2}/g);
-    let _bid = bid
     Logger.log(bid)
-    _bid.match(/.{1,1}/g);
+    bid = bid.match(/.{1,2}/g);
+    for (let i = 0; i < 3; i++)
+      bid[i] = Number(bid[i])
     
-    // values to check
-    const figuresFirst = counts.figures[CONFIG.pokerSymbols[_bid[1]]],
-      figuresSecond = counts.figures[CONFIG.pokerSymbols[_bid[2]]],
-      colors = counts.colors[CONFIG.pokerColors[_bid[1]]]
-    
-    switch (Number(_bid[0])) {
+    // values to check; -2 because code 02 is figure 2 with index 0
+    const figuresFirst = counts.figures[CONFIG.ranks[bid[1] - 2]],
+      figuresSecond = counts.figures[CONFIG.ranks[bid[2] - 2]],
+      colors = counts.colors[CONFIG.suits[bid[2] - 1]] // code 01 is first color
+    Logger.log(`_bid: ${bid}`, 'info')
+    switch (bid[0]) {
       case 9: // Royal flush
-        const z = CONFIG.pokerSymbols.length - 5
-        const arr = counts.figuresByColors[_bid[1]]
-        if (arr.includes(counts.figures[CONFIG.pokerSymbols[z]])
-          && arr.includes(counts.figures[CONFIG.pokerSymbols[z + 1]])
-          && arr.includes(counts.figures[CONFIG.pokerSymbols[z + 2]])
-          && arr.includes(counts.figures[CONFIG.pokerSymbols[z + 3]])
-          && arr.includes(counts.figures[CONFIG.pokerSymbols[z + 4]])
-        ) verdict = true //counts.colorsByFig[card[1]].card[0]
+        const figT = 10 - 2 // fig T = 10
+        const arr = counts.figuresByColors[CONFIG.suits[bid[2] - 1]]
+        verdict = (arr.includes(counts.figures[CONFIG.ranks[figT]])
+          && arr.includes(counts.figures[CONFIG.ranks[figT + 1]])
+          && arr.includes(counts.figures[CONFIG.ranks[figT + 2]])
+          && arr.includes(counts.figures[CONFIG.ranks[figT + 3]])
+          && arr.includes(counts.figures[CONFIG.ranks[figT + 4]])
+        ) ? true : false //counts.colorsByFig[card[1]].card[0]
         break;
       case 8: // Straight flush
-        const w = CONFIG.pokerSymbols.indexOf(_bid[1])
-        const arr1 = counts.figuresByColors[_bid[2]]
-        if (arr1.includes(counts.figures[CONFIG.pokerSymbols[w]])
-          && arr1.includes(counts.figures[CONFIG.pokerSymbols[w + 1]])
-          && arr1.includes(counts.figures[CONFIG.pokerSymbols[w + 2]])
-          && arr1.includes(counts.figures[CONFIG.pokerSymbols[w + 3]])
-          && arr1.includes(counts.figures[CONFIG.pokerSymbols[w + 4]])
-        ) verdict = true
+        const fig = bid[1] - 2
+        const arr1 = counts.figuresByColors[CONFIG.suits[bid[2] - 1]]
+        verdict = (arr1.includes(counts.figures[CONFIG.ranks[fig]])
+          && arr1.includes(counts.figures[CONFIG.ranks[fig + 1]])
+          && arr1.includes(counts.figures[CONFIG.ranks[fig + 2]])
+          && arr1.includes(counts.figures[CONFIG.ranks[fig + 3]])
+          && arr1.includes(counts.figures[CONFIG.ranks[fig + 4]])
+        ) ? true : false
         break;
       case 7: // Four of a kind
-        if (figuresFirst >= 4) verdict = true
+        verdict = (figuresFirst >= 4) ? true : false
         break;
       case 6: // Flush
-        if (colors >= 4) verdict = true
+        verdict = (colors >= 4) ? true : false
         break;
       case 5: // Full house
-        if (figuresFirst >= 3 && figuresSecond >= 2) verdict = true
+        verdict = (figuresFirst >= 3 && figuresSecond >= 2) ? true : false
         break;
       case 4: // Three of a kind
-        if (figuresFirst >= 3) verdict = true
+        verdict = (figuresFirst >= 3) ? true : false
         break;
       case 3: // Straight
         //f0
         // counts.figures[_bid[1]]
-        const y = CONFIG.pokerSymbols.indexOf(_bid[1])
-        if (figuresFirst >= 1
-          && counts.figures[CONFIG.pokerSymbols[y + 1]] >= 1
-          && counts.figures[CONFIG.pokerSymbols[y + 2]] >= 1
-          && counts.figures[CONFIG.pokerSymbols[y + 3]] >= 1
-          && counts.figures[CONFIG.pokerSymbols[y + 4]] >= 1
-        ) verdict = true
+        const fig1 = bid[1] - 2
+        verdict = (figuresFirst >= 1
+          && counts.figures[CONFIG.ranks[fig1 + 1]] >= 1
+          && counts.figures[CONFIG.ranks[fig1 + 2]] >= 1
+          && counts.figures[CONFIG.ranks[fig1 + 3]] >= 1
+          && counts.figures[CONFIG.ranks[fig1 + 4]] >= 1
+        ) ? true : false
         break;
       case 2: // Two pairs
-        if (figuresFirst >= 2 && figuresSecond >= 2) verdict = true
+        verdict = (figuresFirst >= 2 && figuresSecond >= 2) ? true : false
         break;
       case 1: // Pair;
-        if (figuresFirst >= 2) verdict = true
+        verdict = (figuresFirst >= 2) ? true : false
         break;
       case 0: // High card
-        if (figuresFirst >= 1) verdict = true
+        verdict = (figuresFirst >= 1) ? true : false
         break;
     }
+    Logger.log(`verdict: ${verdict}`, 'info')
+    
     const cards = counts.figuresByColors
     return { verdict, cards }
     // const w0 = clients[room.clients[_room.last].id]

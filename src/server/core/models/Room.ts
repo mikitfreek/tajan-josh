@@ -26,6 +26,8 @@ class Room {
       'player': {
         'last': null,
         'next': 0,
+        'opener': 0, // TODO: get next round opening player
+        'check': false,
       },
       'bid': null,
     }

@@ -1,20 +1,20 @@
 const pokerSymbols = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
 
-const pokerColors = ['k', 'h', 't', 'p']; // k: 9826, h: 9825, t: 9831, p: 9828
+const pokerColors = ['c', 'd', 'h', 's']; // k: 9826, h: 9825, t: 9831, p: 9828
 
 let _pokerSymbols = pokerSymbols
 const cardsSymbols9 = _pokerSymbols.splice(7, 6).reverse()
 
 // ♠	&spades;	&#9824;	&#x2660;	black spade suit
-// ♣	&clubs;	    &#9827;	&#x2663;	black club suit = shamrock
 // ♥	&hearts;	&#9829;	&#x2665;	black heart suit = valentine
 // ♦	&diams;	    &#9830;	&#x2666;	black diamond suit
+// ♣	&clubs;	    &#9827;	&#x2663;	black club suit = shamrock
 const emoji = (e) => String.fromCodePoint(e)
-const cardsColors9 = pokerColors.map(e => {
-    if (e === 'k') e = emoji(0x2666) + ' karo'
-    if (e === 'h') e = emoji(0x2665) + ' serducho'
-    if (e === 't') e = emoji(0x2663) + ' treflik'
-    if (e === 'p') e = emoji(0x2660) + ' pikuś'
+const cardsColors9 = pokerColors.reverse().map(e => {
+    if      (e === 's') e = emoji(0x2660) + ' pikuś'
+    else if (e === 'h') e = emoji(0x2665) + ' serducho'
+    else if (e === 'd') e = emoji(0x2666) + ' karo'
+    else if (e === 'c') e = emoji(0x2663) + ' treflik'
     return e
 });
 

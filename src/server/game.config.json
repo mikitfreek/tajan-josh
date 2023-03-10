@@ -1,7 +1,7 @@
 {
   "cardsMax": 5,
   "cardsStart": 2,
-  "pokerSymbols": [
+  "ranks": [
     "2",
     "3",
     "4",
@@ -16,11 +16,11 @@
     "K",
     "A"
   ],
-  "pokerColors": [
-    "k",
+  "suits": [
+    "c",
+    "d",
     "h",
-    "t",
-    "p"
+    "s"
   ],
   "ranks09": [
     "Royal flush",

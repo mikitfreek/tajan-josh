@@ -12,14 +12,14 @@ import { Debug } from '../utils/Debug.js'
 const Debugger = new Debug()
 
 export class Game {
-  Renderer
-  Listeners
-  clientId
-  roomId
-  ws
-  hashHandlerFlag = true
-  joining = false
-  actionButtons: HTMLElement;
+  ws: WebSocket
+  Renderer: Render
+  clientId: string
+  name: string
+  roomId: string
+  actionButtons: HTMLElement
+  hashHandlerFlag: boolean = true
+  joining: boolean = false
 
   constructor() {
     this.initWebSocket()
@@ -106,10 +106,10 @@ export class Game {
       this.created(res)
     else if (res.method === 'join')
       this.joined(res)
-    else if (res.method === 'turn')
-      this.turn()
     else if (res.method === 'draw')
       this.drawed(res)
+    else if (res.method === 'play')
+      this.play(res)
     else if (res.method === 'move')
       this.moved(res)
 
@@ -140,11 +140,28 @@ export class Game {
     // }
     // DEBUG COMMENT END
 
+    // DEBUG
+    // this.name = ''
+    // while (this.name === '' || this.name.indexOf(' ') >= 0)
+    //   this.name = glob.window.prompt("Please enter your nickname (dont use space)")
+    //
+
+    // TODO: message loaded
     const payLoad = {
       'method': 'load',
-      'id': this.clientId
+      'id': this.clientId,
+      'name': this.name
     }
     this.ws.send(JSON.stringify(payLoad))
+
+    // // DEBUG
+    // const payLoad2 = {
+    //   'method': 'create',
+    //   'hostId': this.clientId
+    // }
+    // // console.log('data')
+    // this.ws.send(JSON.stringify(payLoad2))
+    // ///////
 
     // room code handlers
     this.hashHandler()
@@ -160,6 +177,15 @@ export class Game {
     const alert = glob.document.getElementById('alert')
     this.roomId = res.room.id
     const clientId = res.room.hostId
+
+    // // DEBUG
+    // const payLoad = {
+    //   'method': 'draw',
+    //   'roomId': this.roomId
+    // }
+    // // console.log('data')
+    // this.ws.send(JSON.stringify(payLoad))
+    // /////////
 
     // TODO: disable hash handler for a room host hash change
     // https://stackoverflow.com/questions/13233914/prevent-window-onhashchange-from-executing-when-hash-is-set-via-javascript
@@ -210,18 +236,24 @@ export class Game {
     const alert = glob.document.getElementById('alert')
     this.roomId = res.room.id
     // if (this.clientId === 'undefined') this.clientId = res.clientId
-    this.clientId = res.clientId
+    // this.clientId = res.clientId
 
     this.Renderer.setData(this.clientId, this.roomId)
 
-    Logger.log(`Room: ${this.roomId} joined successfully by client: ${this.clientId}`, 'success')
+    Logger.log(`Room: ${this.roomId} joined successfully by client: ${res.clientId}`, 'success')
     // const alert = glob.document.getElementById('alert')
 
-    // if (this.clientId === res.clientId) {
-    while (alert.children.length >= 1)
-      alert.removeChild(alert.lastChild);
+    let message
+    if (res.clientId !== this.clientId) {
+      message = `${res.clientId} joined a room: ${this.roomId}`
+    }
+    else if (res.clientId === this.clientId) {
+      while (alert.children.length >= 1)
+        alert.removeChild(alert.lastChild);
+      message = `You (${res.clientId}) joined a room: ${this.roomId}`
+    }
     const p = glob.document.createElement('p')
-    p.innerText = `${res.clientId} joined a room: ${this.roomId}`
+    p.innerText = message
     alert.append(p)
     // }
     // const z = glob.document.querySelector('#online span')
@@ -243,29 +275,42 @@ export class Game {
     Debugger.setRoomId(this.roomId)
   }
 
-  turn() {
-    // show action buttons
-    this.actionButtons.style.visibility = ''
+  play(res) {
     const alert = glob.document.getElementById('alert')
-    Logger.log(`Now is your turn, client: ${this.clientId} from room id: ${this.roomId}`, 'info')
-    // const alert0 = glob.document.getElementById('alert')
 
     while (alert.children.length >= 1)
       alert.removeChild(alert.lastChild);
+
+    if (res.type === 'turn')
+      this.turn(res, alert)
+    else if (res.type === 'now')
+      this.now(res, alert)
+    else Logger.log(`wrong queue message: type`, 'error')
+  }
+
+  turn(res, alert) {
+    // show action buttons
+    this.actionButtons.style.visibility = 'visible'
+    // show and hide check button
+    if (!res.check) glob.document.getElementById('check').style.visibility = 'hidden'
+
+    Logger.log(`Now is your turn, client: ${this.clientId} from room id: ${this.roomId}`, 'info')
+    // const alert0 = glob.document.getElementById('alert')
+
     const p0 = glob.document.createElement('p')
     p0.innerText = `Now is your turn!`
     alert.append(p0)
   }
 
-  now(res) {
+  now(res, alert) {
     // hide action buttons
+    glob.document.getElementById('check').style.visibility = null
     this.actionButtons.style.visibility = 'hidden'
-    const alert = glob.document.getElementById('alert')
+    // glob.document.getElementById('check').style.visibility = 'hidden'
+
     Logger.log(`Now is client: ${res.name} turn, from room id: ${this.roomId}`, 'info')
     // const alert0 = glob.document.getElementById('alert')
 
-    while (alert.children.length >= 1)
-      alert.removeChild(alert.lastChild);
     const p0 = glob.document.createElement('p')
     p0.innerText = `Waiting for ${res.name} move`
     alert.append(p0)
