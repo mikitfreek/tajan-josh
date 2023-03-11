@@ -20,9 +20,8 @@ class Room {
 
   private() {
     const _roomData = {
-      // 'score': cardsStart,
-      // 'cards': [],
       'cards': [],
+      // 'clients': ['cards': [],'score': cardsStart], // TODO: move from client model
       'player': {
         'last': null,
         'next': 0,
@@ -35,4 +34,5 @@ class Room {
     return _roomData
   }
 }
+
 module.exports = { Room }

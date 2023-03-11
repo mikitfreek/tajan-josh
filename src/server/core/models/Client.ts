@@ -9,7 +9,7 @@ class Client {
       'ip': clientIp,
       'room': 'init',
       'color': 'init',
-      'score': cardsStart, // move to _room
+      'score': cardsStart, // TODO: move to _room.clients
       'cards': [],         // same here
       'counters': {
         'limit': 0,
@@ -20,4 +20,5 @@ class Client {
     return clientData
   }
 }
+
 module.exports = { Client }

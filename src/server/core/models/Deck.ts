@@ -6,9 +6,10 @@ class Deck {
   constructor(additional_cards = 0) {
     this.deck = [];
 
-    //The order of the suits from strongest to weakest is Spades, Hearts, Diamonds, and Clubs
+    // the order of the suits from strongest to weakest is 
+    // Spades, Hearts, Diamonds, and Clubs
     const suits = CONFIG.suits;
-    // const values = ['9', 'T', 'J', 'Q', 'K', 'A'];
+
     additional_cards = additional_cards > 7 ? 7 : additional_cards;
     const values = CONFIG.ranks.slice(7 - additional_cards, 13);
 
@@ -40,4 +41,5 @@ class Deck {
     return this.deck.pop();
   }
 }
+
 module.exports = { Deck }
