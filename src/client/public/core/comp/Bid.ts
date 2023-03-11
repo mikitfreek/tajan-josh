@@ -1,16 +1,13 @@
 import { pokerColors, pokerSymbols } from './params.js'
 
 export class Bid {
-    // field 
     cards: string;
 
-    // constructor 
     constructor(cards: string) {
 
       let a, b, c, d, e;
 
       const bid = cards.match(/.{1,2}/g);
-    //   const B = (n: number) => pokerColors[Number(bid[1 + n])]; /////////
 
       for (let i = 0; i < bid.length; i++) {
         switch (i) {

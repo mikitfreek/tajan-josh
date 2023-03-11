@@ -2,11 +2,6 @@ export class Store extends EventTarget {
     localStorageKey: string
     tajan: { id: string; date: number; };
     getClientId: () => string;
-
-    // get: (id: any) => any;
-    // isAllCompleted: () => any;
-    // hasCompleted: () => any;
-    // all: (filter: any) => any;
     
 	constructor(localStorageKey) {
 		super();
@@ -42,38 +37,4 @@ export class Store extends EventTarget {
 		};
 		this._save();
 	}
-	// add(todo) {
-	// 	this.tajan.push({
-	// 		title: todo.title,
-	// 		completed: false,
-	// 		id: "id_" + Date.now(),
-	// 	});
-	// 	this._save();
-	// }
-	// remove({ id }) {
-	// 	this.tajan = this.tajan.filter((todo) => todo.id !== id);
-	// 	this._save();
-	// }
-	// toggle({ id }) {
-	// 	this.tajan = this.tajan.map((todo) =>
-	// 		todo.id === id ? { ...todo, completed: !todo.completed } : todo
-	// 	);
-	// 	this._save();
-	// }
-	// clearCompleted() {
-	// 	this.tajan = this.tajan.filter((todo) => !todo.completed);
-	// 	this._save();
-	// }
-	// update(todo) {
-	// 	this.tajan = this.tajan.map((t) => (t.id === todo.id ? todo : t));
-	// 	this._save();
-	// }
-	// toggleAll() {
-	// 	const completed = !this.hasCompleted() || !this.isAllCompleted();
-	// 	this.tajan = this.tajan.map((todo) => ({ ...todo, completed }));
-	// 	this._save();
-	// }
-	// revert() {
-	// 	this._save();
-	// }
 };

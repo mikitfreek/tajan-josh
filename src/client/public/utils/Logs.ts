@@ -43,9 +43,7 @@ export class Logs {
     const elapsed = Date.now();
     const now = new Date(elapsed);
     const time = now.toUTCString();
-    // console.log(`\n========== log ==========`)
     console.log(`\n${time}`)
     console.log(msg)
-    // console.log(`=========================`)
   }
 }

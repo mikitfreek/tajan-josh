@@ -112,10 +112,12 @@ class Game {
       const elapsed = Date.now();
       const now = new Date(elapsed);
 
-      // COMMENTED FOR DEBUGGING
+      /// COMMENTED FOR DEBUGGING
       // clientName = req.name
-      // FOR DEBUGGING
+      ///
+      /// FOR DEBUGGING
       clientName = `client_${now.getDate()}_${now.getMonth() + 1}_${now.getHours()}${now.getMinutes()}_${now.getSeconds()}_${now.getMilliseconds()}`
+      ///
 
       const clientData = new Client(clientName, clientId, ws, clientIp, CONFIG.cardsStart)
       this.clients[clientId] = clientData

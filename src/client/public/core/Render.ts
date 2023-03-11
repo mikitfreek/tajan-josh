@@ -1,4 +1,3 @@
-// import { Parser } from './Parser'
 import { View } from './comp/View.js'
 import { Bid } from './comp/Bid.js'
 import * as params from './comp/params.js'
@@ -23,7 +22,7 @@ export class Render {
   }
 
   static createCards(data) {
-    // console.log(data)
+
     const cards = document.createElement('div')
     cards.className = 'cards'
 
@@ -62,7 +61,6 @@ export class Render {
       this.animateSidebar(ui)
     }
 
-    // const sidebar = document.querySelector('.sidebar');
     const closeBtn = document.getElementById('btn')
     closeBtn.onclick = () => {
       this.animateSidebar(ui)
@@ -91,22 +89,12 @@ export class Render {
   }
 
   updateUI(bid) {
-    /////////////////
-    // let bid = '090102'; // output from server ------> client  // ['K','K','Q','Q','Q']
-    // let cards = 'AhApAtKkKp'; // - ,, -
-    // /////////////////
 
     let _bid = bid.match(/.{1,2}/g);
 
-    // let _cards = cards.match(/.{1,2}/g);
-
     let bid_ = new Bid(bid);
-    // console.log(bid_.cards);
 
-    ////////////////////////////////////////////////////////////////
-    // // bid UI
     const bid_last = document.getElementById('last');
-    // const bid_lastfig = document.getElementById('last-fig');
     const span0 = document.createElement('span');
 
     let _arr = [],
@@ -144,10 +132,6 @@ export class Render {
         BB(params.pokerSymbols, 0);
         break;
     }
-    // colors
-    // let BB = () => { for (let i = 0; i < pokerSymbols.length; i++) {
-    //   ((bid_.cards.split(pokerColors[i]).length - 1) > 0) }}
-    // if ()
 
     span0.innerHTML = _arr[0] + 'x <i>' + arr[0] + '</i>';
     const span1 = document.createElement('span');
@@ -157,11 +141,6 @@ export class Render {
     bid_last.appendChild(span0);
     bid_last.appendChild(span1);
     bid_last.appendChild(span2);
-    // bid_lastfig.innerHTML = ranks09[ranks09.length-Number(_bid[0])-1];
-
-    // let list0_, list1_, list2_//, s__
-    // let s = -1
-
   }
 
   toggleDarkMode() {
@@ -177,7 +156,7 @@ export class Render {
     const exit = document.createElement('span');
     exit.innerHTML = '&#10005;';
     exit.classList.add('exit'); // esc
-    //exit.id = 'exit';
+
     md.appendChild(exit);
 
     const title = document.createElement('div');
@@ -186,7 +165,7 @@ export class Render {
     const content = document.createElement('div');
     content.classList.add('content');
 
-    //////////////////////////////////
+    ///
     const lists = document.createElement('div');
     lists.classList.add('lists');
 
@@ -200,49 +179,18 @@ export class Render {
       bid = setBid(list0.options.selectedIndex)
 
       onButtonClick(list0.options.selectedIndex);
-      // list0_= list0.options.selectedIndex
-      // list2.options.selectedIndex
     }, false);
 
-    // list.innerHTML = "";
     params.ranks9.forEach(function (e, i) {
       const p = document.createElement('option');
       p.appendChild(document.createTextNode(e));
-      // p.value=String(ranks9.length-i)
       list0.appendChild(p);
     });
-
-
-    // cardsSymbols9.forEach(function(e) {
-    //   var p = document.createElement('option');
-    //   p.appendChild(document.createTextNode(e));
-    //   list1.appendChild(p);
-    // });
-
-
-    // function onButtonClick() {
-    //   console.log('click')
-    //   // ranks9.forEach(function(e) {
-    //   //   var p = document.createElement('option');
-    //   //   p.appendChild(document.createTextNode(e));
-    //   //   list1.appendChild(p);
-    //   // });
-    //   // lists.appendChild(list1);
-    //   // content.appendChild(lists);
-    // }
-
-    // const _buttons = document.querySelectorAll('option'); //getElementsByTagName('option')
-    // _buttons.forEach(e => {
-    //   e.addEventListener('click', onButtonClick, false);
-    // })
-
-    //////////////////////////////////
-
+    ///
 
     switch (id) {
       case 'raise':
         title.innerHTML = 'Raise a bet!';
-        // content.innerHTML = 'Select..!';
 
         lists.appendChild(list0);
 
@@ -256,22 +204,6 @@ export class Render {
         mess.innerHTML = 'Are you sure to check last player figure?';
         content.appendChild(mess);
         break;
-      // case 'checked':
-      //   title.innerHTML = 'Check last player!';
-
-      //   const mess1 = document.createElement('div');
-      //   mess1.classList.add('message')
-      //   mess1.innerHTML = 'Are you sure to check last player figure?';
-      //   content.appendChild(mess1);
-      //   break;
-      // case 'checkedu':
-      //   title.innerHTML = 'Check last player!';
-
-      //   const mess2 = document.createElement('div');
-      //   mess2.classList.add('message')
-      //   mess2.innerHTML = 'Are you sure to check last player figure?';
-      //   content.appendChild(mess2);
-      //   break;
     }
 
     md.appendChild(title);
@@ -285,21 +217,17 @@ export class Render {
     _btns1.classList.add('btn', 'cancel'); // esc
     _btns1.innerHTML = 'Cancel';
 
-    // let   list0__=list0.options.selectedIndex, 
-    //       list1__=list1.options.selectedIndex, 
-    //       list2__=list2.options.selectedIndex
-    //let    s=String('0' + Number(9 - list0_) + '0' + list1_ + '0' + list2_), // = list0.options.selectedIndex
-    // const ranks9 = [
-    //   'Royal flush',      // 09 02 01 // 9k   // 3rd color
-    //   'Straight flush',   // 08 09 01 // 89k  // 3rd color
-    //   'Four of a kind',   // 07 02 00 // 79
-    //   'Flush',            // 06 00 01 // 6k   // 3rd color
-    //   'Full house',       // 05 02 03 // 59T
-    //   'Three of a kind',  // 04 02 00 // 49
-    //   'Straight',         // 03 09 00 // 39
-    //   'Two pairs',        // 02 03 02 // 29T  03 03 02 02 // sort max to begin
-    //   'Pair',             // 01 02 00 // 19   02 02 
-    //   'High card',        // 00 02 00 // 09   02
+    // RANKS_9 - cards from 9 to Ace
+    //   'Royal flush',      // 09 02 01   // 3rd color
+    //   'Straight flush',   // 08 09 01   // 3rd color
+    //   'Four of a kind',   // 07 02 00
+    //   'Flush',            // 06 00 01   // 3rd color
+    //   'Full house',       // 05 02 03
+    //   'Three of a kind',  // 04 02 00
+    //   'Straight',         // 03 09 00
+    //   'Two pairs',        // 02 03 02   // higher figure as 2nd
+    //   'Pair',             // 01 02 00
+    //   'High card',        // 00 02 00
     let bid;
     const setBid = (paramBid, param1 = -1, param2 = -1) => {
       let b = 9 - paramBid // 9 - number of bids
@@ -314,8 +242,6 @@ export class Render {
 
       return `0${b}${one}${two}`
     }
-    // let bid = (id === 'raise') ? s_ : 'check';
-    // const bid = s_
 
     const ranks_ = document.getElementById('ranks')
     const cards_ = document.getElementById('cards')
@@ -324,7 +250,6 @@ export class Render {
     const btns = document.getElementById('action');
     btns.style.visibility = 'hidden';
     const closeMd = () => {
-      // document.body.removeChild(document.body.lastChild);
       md.remove()
       btns.style.visibility = 'visible';
     }
@@ -341,17 +266,18 @@ export class Render {
     // add canvas to dom
     document.body.appendChild(md);
 
-    // _btns2.id = (id === 'raise') ? 'raise-accept' : 'fire-accept'
     let allow = false
     _btns2.addEventListener('click', (e) => {
+
       const alert = document.getElementById('alert')
       while (alert.children.length >= 1)
         alert.removeChild(alert.lastChild);
       const d = document.createElement('div')
+
       if (allow || id === 'check') {
-        // d.className='createbtn'
+
         d.innerText = 'Bid is too small' // sending bid to server
-        // console.log(bid)
+
         // raise
         switch (id) {
           case 'raise':
@@ -374,7 +300,6 @@ export class Render {
             this.ws.send(JSON.stringify(payLoad2))
             break;
           }
-        // alert.append(d);
 
         closeMd()
       }
@@ -410,18 +335,15 @@ export class Render {
           bid = setBid(list0.options.selectedIndex, 0, list1.options.selectedIndex)
         else bid = setBid(list0.options.selectedIndex, list1.options.selectedIndex)
 
-        // console.log(s)
         if (lists.childNodes.length > 2) {
           onButtonClick2(list1.options.selectedIndex);
-          // list1_= list1.options.selectedIndex
-          // s__='0' + (9 - Number(list0__)) + '0' + list1__
         }
         else allow = true
       }, false);
 
       let symbols = [
         params.cardsColors9,
-        params.cardsColors9, //here cardsStraightSymbol9
+        params.cardsColors9, // TODO: here cardsStraightSymbol9
         params.cards4Symbols9,
         params.cardsColors9,
         params.cards3Symbols9,
@@ -434,7 +356,6 @@ export class Render {
       symbols[val].forEach(function (e, i) {
         const p = document.createElement('option');
         p.appendChild(document.createTextNode(e));
-        // p.value=String(symbols.length-i)
         list1.appendChild(p);
       });
 
@@ -446,9 +367,6 @@ export class Render {
         if (lists.childNodes.length > 2) {
           onButtonClick1(list2.options.selectedIndex)
           bid = setBid(list0.options.selectedIndex, list1.options.selectedIndex, list2.options.selectedIndex)
-
-          // list2_= list2.options.selectedIndex
-          // s__='0' + Number(9 - list0__) + '0' + list1__ + '0' + list2__
         }
       }, false);
       if (val == 7 || val == 4) { // || val==1
@@ -463,7 +381,6 @@ export class Render {
         params.cards2Symbols9.forEach(function (e, i) {
           const p = document.createElement('option');
           p.appendChild(document.createTextNode(e));
-          // p.value=String(cards2Symbols9.length-i)
           list2.appendChild(p);
         });
 

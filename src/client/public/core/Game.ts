@@ -1,5 +1,4 @@
 import { Store } from './comp/Store.js'
-// import { Listeners } from './comp/Listeners.js' // too complicated
 import { Render } from './Render.js'
 
 const Storage = new Store("tajan-josh");
@@ -28,7 +27,6 @@ export class Game {
 
     this.Renderer = new Render(this.ws)
 
-    // this.Listeners = new Listeners(this.Renderer) // unable to pass Renderer
     this.listeners()
     
     // hide action buttons
@@ -44,37 +42,35 @@ export class Game {
 
       this.Renderer.renderSidebar()
       this.Renderer.toggleDarkMode()
-      // Renderer.updateUI()
     }
-    // if (typeof clientId === "undefined") {
-    //   let _cards_ = createCards([['A','h'],['K','d'],['T','c'],['9','s']])
-    //   glob.document.body.appendChild(_cards_)
-    // }
   }
 
   initWebSocket() {
-    const host = glob.location.origin.replace(/^(http|https)/, 'ws') // /^http/
+    const host = glob.location.origin.replace(/^(http|https)/, 'ws')
     this.ws = new WebSocket(host)
   }
 
+  /*-------------
+   *  Methods
+   *------------*/
+
   init() {
-    ///////// Create room ////////////
+    /// Create room
     const alert = glob.document.getElementById('alert')
     while (alert.children.length >= 1)
       alert.removeChild(alert.lastChild);
     const d = glob.document.createElement('div')
     d.className = 'createbtn'
     d.innerText = 'Create a room'
-    d.addEventListener('click', e => {
+    d.addEventListener('click', () => {
       const payLoad = {
         'method': 'create',
         'hostId': this.clientId
       }
-      // console.log('data')
       this.ws.send(JSON.stringify(payLoad))
     })
     alert.append(d)
-    //////////////////////////////////
+    ///
   }
 
   hashHandler() {
@@ -94,7 +90,6 @@ export class Game {
       'clientId': req.clientId,
       'roomId': req.roomId
     }
-    // console.log('data')
     this.ws.send(JSON.stringify(payLoad))
   }
 
@@ -116,12 +111,11 @@ export class Game {
     Logger.print(res)
   }
 
-  //----------
-  // Messages
-  //----------
+  /*-------------
+   *  Messeges
+   *------------*/
 
   connected(res) {
-    // ws.send(clientId)
     this.clientId = res.clientId
     Logger.log('Client id set on init: ' + this.clientId, 'info')
 
@@ -129,7 +123,7 @@ export class Game {
     const clientId = Storage.getClientId()
     Logger.log('Client id from local storage: ' + clientId, 'info')
 
-    // COMMENTED FOR DEBUGGING
+    /// COMMENTED FOR DEBUGGING
     // if clientId exists locally
     if (clientId?.length === 36) {
       this.clientId = clientId // set local id
@@ -138,13 +132,13 @@ export class Game {
     // else {
     //   Storage.update(this.clientId)
     // }
-    // DEBUG COMMENT END
+    ///
 
-    // DEBUG
+    /// COMMENTED FOR DEBUGGING
     // this.name = ''
     // while (this.name === '' || this.name.indexOf(' ') >= 0)
     //   this.name = glob.window.prompt("Please enter your nickname (dont use space)")
-    //
+    ///
 
     // TODO: message loaded
     const payLoad = {
@@ -154,14 +148,14 @@ export class Game {
     }
     this.ws.send(JSON.stringify(payLoad))
 
-    // // DEBUG
+    /// FOR DEBUGGING
     // const payLoad2 = {
     //   'method': 'create',
     //   'hostId': this.clientId
     // }
     // // console.log('data')
     // this.ws.send(JSON.stringify(payLoad2))
-    // ///////
+    ///
 
     // room code handlers
     this.hashHandler()
@@ -178,14 +172,14 @@ export class Game {
     this.roomId = res.room.id
     const clientId = res.room.hostId
 
-    // // DEBUG
+    /// FOR DEBUGGING
     // const payLoad = {
     //   'method': 'draw',
     //   'roomId': this.roomId
     // }
     // // console.log('data')
     // this.ws.send(JSON.stringify(payLoad))
-    // /////////
+    ///
 
     // TODO: disable hash handler for a room host hash change
     // https://stackoverflow.com/questions/13233914/prevent-window-onhashchange-from-executing-when-hash-is-set-via-javascript
@@ -193,12 +187,11 @@ export class Game {
     glob.location.replace('#' + this.roomId)
 
     Logger.log(`Room created successfully by client: ${clientId}, with id: ${this.roomId}`, 'success')
-    // console.log(glob.location.origin + '/r/' + roomId)
+
     glob.navigator.clipboard.writeText(glob.location.origin + '/#' + this.roomId).then(res => {
       console.log(`${glob.location.origin + '/#' + this.roomId} - copied to clipboard`);
     })
 
-    // const alert = glob.document.getElementById('alert')
     while (alert.children.length >= 1)
       alert.removeChild(alert.lastChild);
     const p = glob.document.createElement('p')
@@ -212,9 +205,7 @@ export class Game {
     a.className = 'clip'
     alert.append(a)
 
-    ///////// Deal cards ////////////
-    // const alert3 = glob.document.getElementById('alert')
-
+    /// deal cards
     const d3 = glob.document.createElement('div')
     d3.className = 'createbtn'
     d3.innerText = 'Deal cards'
@@ -227,7 +218,7 @@ export class Game {
       this.ws.send(JSON.stringify(payLoad))
     })
     alert.append(d3)
-    //////////////////////////////////
+    ///
 
     Debugger.setRoomId(this.roomId)
   }
@@ -235,13 +226,10 @@ export class Game {
   joined(res) {
     const alert = glob.document.getElementById('alert')
     this.roomId = res.room.id
-    // if (this.clientId === 'undefined') this.clientId = res.clientId
-    // this.clientId = res.clientId
 
     this.Renderer.setData(this.clientId, this.roomId)
 
     Logger.log(`Room: ${this.roomId} joined successfully by client: ${res.clientId}`, 'success')
-    // const alert = glob.document.getElementById('alert')
 
     let message
     if (res.clientId !== this.clientId) {
@@ -255,22 +243,6 @@ export class Game {
     const p = glob.document.createElement('p')
     p.innerText = message
     alert.append(p)
-    // }
-    // const z = glob.document.querySelector('#online span')
-    // z.appendChild(res.room.clients.length)
-
-    ///////// Create room ////////////
-    // const alert2 = glob.document.getElementById('online')
-    // while (alert2.children.length >= 1) {
-    //   alert2.removeChild(alert2.lastChild);
-    // }
-    // res.room.clients.forEach(c => {
-    //   const d2 = glob.document.createElement('div')
-    //   // d2.className='createbtn'
-    //   d2.innerText = c.name
-    //   alert2.append(d2)
-    // });
-    //////////////////////////////////
 
     Debugger.setRoomId(this.roomId)
   }
@@ -295,7 +267,6 @@ export class Game {
     if (!res.check) glob.document.getElementById('check').style.visibility = 'hidden'
 
     Logger.log(`Now is your turn, client: ${this.clientId} from room id: ${this.roomId}`, 'info')
-    // const alert0 = glob.document.getElementById('alert')
 
     const p0 = glob.document.createElement('p')
     p0.innerText = `Now is your turn!`
@@ -306,10 +277,8 @@ export class Game {
     // hide action buttons
     glob.document.getElementById('check').style.visibility = null
     this.actionButtons.style.visibility = 'hidden'
-    // glob.document.getElementById('check').style.visibility = 'hidden'
 
     Logger.log(`Now is client: ${res.name} turn, from room id: ${this.roomId}`, 'info')
-    // const alert0 = glob.document.getElementById('alert')
 
     const p0 = glob.document.createElement('p')
     p0.innerText = `Waiting for ${res.name} move`
@@ -327,7 +296,6 @@ export class Game {
     let _cards_ = Render.createCards(cards)
     glob.document.body.appendChild(_cards_)
 
-    // const alert = glob.document.getElementById('alert')
     while (alert.children.length >= 1)
       alert.removeChild(alert.lastChild);
     const p = glob.document.createElement('p')
@@ -352,9 +320,9 @@ export class Game {
     while (alert.children.length >= 1)
       alert.removeChild(alert.lastChild);
     const p = glob.document.createElement('p')
-    // wygrane
+    // winner
     if (res.verdict === 1) p.innerText = `Wygrany: ${this.roomId}`
-    // przegrany
+    // loser
     else if (res.verdict === 0) p.innerText = `Przegrany: ${this.roomId}`
     else Logger.log(`wrong move message: verdict`, 'error')
     alert.append(p)
@@ -371,6 +339,10 @@ export class Game {
     alert.append(p)
   }
 
+  /*-------------
+   *  Listeners
+   *------------*/
+
   listeners() {
     const raise = glob.document.getElementById('raise')
     raise.addEventListener("click", () => {
@@ -386,5 +358,5 @@ export class Game {
     online.addEventListener("click", () => {
         console.log('online: ');
     });
-}
+  }
 }
