@@ -24,7 +24,7 @@ export class Render {
   static createCards(data) {
 
     const cards = document.createElement('div')
-    cards.className = 'cards'
+    cards.classList.add('cards')
 
     const emoji = (e) => String.fromCodePoint(e)
     const suits = (e) => {
@@ -37,11 +37,11 @@ export class Render {
 
     for (let i = 0; i < data.length; i++) {
       const card = document.createElement('div')
-      card.className = 'card'
+      card.classList.add('card')
       const label = document.createElement('div')
-      label.className = 'label'
+      label.classList.add('label')
       if (data[i][1] === 'h' || data[i][1] === 'd')
-        label.className += ' red'
+        label.classList.add('red')
       for (let k = 0; k < 2; k++) {
         const span = document.createElement('span')
         span.innerHTML = k === 1 ? suits(data[i][1]) : data[i][k]
