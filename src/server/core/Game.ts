@@ -242,7 +242,7 @@ class Game {
       'color': client.color,
       'active': true
     })
-    this.rooms[room.id].clients[clientId] = {
+    this._rooms[room.id].clients[clientId] = {
       // 'id': clientId,
       'score': CONFIG.cardsStart, // TODO: move to _room.clients
       'cards': [],
