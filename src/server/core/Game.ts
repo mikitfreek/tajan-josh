@@ -232,7 +232,7 @@ class Game {
    *------------*/
 
   joinRoom(clientId, room) {
-    let client = this.clients[clientId]
+    const client = this.clients[clientId]
     if (client.color === 'init')
       client.color = randomColor()
 
@@ -242,6 +242,11 @@ class Game {
       'color': client.color,
       'active': true
     })
+    this.rooms[room.id].clients[clientId] = {
+      // 'id': clientId,
+      'score': CONFIG.cardsStart, // TODO: move to _room.clients
+      'cards': [],
+    }
   }
 
   draw(room) {
@@ -249,23 +254,24 @@ class Game {
     const newDeck = new Deck(additional_cards);
     newDeck.shuffle()
 
-    room.clients.forEach(c => {
-      this.clients[c.id].cards = []
-    })
+    // room.clients.forEach(c => {
+    //   this._rooms[room.id].clients[c.id].cards = []
+    // })
     // Draw cards
     // 2 times for all, then only for players with penalty cards
     for (let i = 0; i < CONFIG.cardsMax; i++)
       room.clients.forEach(c => {
-        const client = this.clients[c.id]
+        const client = this._rooms[room.id].clients[c.id]
+        if (i === 0) client.cards = [];
         if (client.score - i > 0)
-          this.clients[c.id].cards.push(newDeck.deal())
+        client.cards.push(newDeck.deal())
       })
     Logger.log('Dealing cards in room: ' + room.id)
 
     room.clients.forEach(c => {
       Logger.log(c.id + ' received cards')
       let cards = []
-      this.clients[c.id].cards.forEach(card => {
+      this._rooms[room.id].clients[c.id].cards.forEach(card => {
         cards.push(card)
       })
       const payLoad = {
@@ -356,8 +362,8 @@ class Game {
     const victim = room.clients[this._rooms[roomId].player.last]
 
     // TODO: make player inactive when he has more cards than MAX
-    if (!verdict) ++this.clients[victim.id].score
-    else if (verdict) ++this.clients[checker.id].score
+    if (!verdict) ++this._rooms[room.id].clients[victim.id].score
+    else if (verdict) ++this._rooms[room.id].clients[checker.id].score
     else Logger.log(`verdict: ${verdict} with bid: ${_room.bid}`, 'error')
 
     room.clients.forEach(c => {
@@ -392,7 +398,7 @@ class Game {
     // sum cards on hands
     let allCards = []
     room.clients?.forEach(c => {
-      this.clients[c.id].cards.forEach(card => {
+      this._rooms[room.id].clients[c.id].cards.forEach(card => {
         allCards.push(card)
       })
     })

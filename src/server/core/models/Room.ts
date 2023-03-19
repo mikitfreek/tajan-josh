@@ -29,6 +29,7 @@ class Room {
         'check': false,
       },
       'bid': null,
+      'clients': []
     }
 
     return _roomData
